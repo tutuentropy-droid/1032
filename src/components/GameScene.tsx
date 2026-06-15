@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { useAnimalAI } from '@/hooks/useAnimalAI';
 import { ANIMAL_MINI_GAMES, FUSION_COMBOS, ISLAND_INFO, TIME_OF_DAY_CONFIG, IslandType } from '@/types/game';
@@ -10,6 +10,8 @@ import MiniGameModal from './MiniGameModal';
 import FusedAnimalSprite from './FusedAnimalSprite';
 import FusionAnimation from './FusionAnimation';
 import BoatTransition from './BoatTransition';
+import Player from './Player';
+import AnimalSelectionPanel from './AnimalSelectionPanel';
 
 const WEATHER_ICONS: Record<string, string> = {
   sunny: '☀️',
@@ -34,23 +36,53 @@ const GameScene: React.FC = () => {
     travelToIsland,
     isTransitioning,
     advanceTimeOfDay,
+    player,
+    isWalkingMode,
+    setPlayerMoving,
+    toggleWalkingMode,
+    stopWalking,
+    player: { isWalkingAnimals },
+    activeWalkingCombination,
   } = useGameStore();
 
   const [miniGameOpen, setMiniGameOpen] = useState(false);
   const [currentGameAnimalId, setCurrentGameAnimalId] = useState<string | null>(null);
   const [islandMenuOpen, setIslandMenuOpen] = useState(false);
+  const gameContainerRef = React.useRef<HTMLDivElement>(null);
 
   useAnimalAI();
 
   const islandInfo = ISLAND_INFO[currentIsland];
   const timeConfig = TIME_OF_DAY_CONFIG[timeOfDay];
 
-  const handleBackgroundClick = () => {
+  const getScenePercentPosition = useCallback((clientX: number, clientY: number) => {
+    const container = gameContainerRef.current;
+    if (!container) return { x: 50, y: 60 };
+
+    const rect = container.getBoundingClientRect();
+    const x = ((clientX - rect.left) / rect.width) * 100;
+    const y = ((clientY - rect.top) / rect.height) * 100;
+    const clampedX = Math.max(8, Math.min(92, x));
+    const clampedY = Math.max(42, Math.min(78, y));
+    return { x: clampedX, y: clampedY };
+  }, []);
+
+  const handleBackgroundClick = (e: React.MouseEvent) => {
     if (selectedFood) {
       setSelectedFood(null);
     }
     if (islandMenuOpen) {
       setIslandMenuOpen(false);
+    }
+    if (isWalkingAnimals) {
+      const pos = getScenePercentPosition(e.clientX, e.clientY);
+      setPlayerMoving(true, pos);
+    }
+  };
+
+  const handlePlayerClick = () => {
+    if (!isWalkingAnimals) {
+      toggleWalkingMode();
     }
   };
 
@@ -85,7 +117,8 @@ const GameScene: React.FC = () => {
 
   return (
     <div
-      className={`game-container ${selectedFood ? 'cursor-feed' : ''}`}
+      ref={gameContainerRef}
+      className={`game-container ${selectedFood ? 'cursor-feed' : ''} ${isWalkingAnimals ? 'cursor-crosshair' : ''}`}
       onClick={handleBackgroundClick}
       style={{
         filter: `brightness(${globalBrightness})`,
@@ -223,6 +256,8 @@ const GameScene: React.FC = () => {
         );
       })}
 
+      <Player player={player} onClick={handlePlayerClick} />
+
       {fusedAnimals.map((fused) => {
         const combo = FUSION_COMBOS.find(c => c.type === fused.fusionType);
         if (!combo) return null;
@@ -287,6 +322,31 @@ const GameScene: React.FC = () => {
 
       <FeedToolbar />
 
+      {isWalkingAnimals && (
+        <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
+          {activeWalkingCombination && (
+            <div className="bg-gradient-to-r from-pink-400 to-purple-500 text-white px-4 py-2 rounded-2xl shadow-lg animate-bounce-gentle">
+              <div className="font-bold text-sm">✨ {activeWalkingCombination.name}</div>
+              <div className="text-xs opacity-90">{activeWalkingCombination.description}</div>
+            </div>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              stopWalking();
+            }}
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-2xl shadow-lg font-bold text-sm transition-all hover:scale-105"
+          >
+            🛑 结束散步
+          </button>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl px-3 py-2 text-xs text-gray-600 shadow-md">
+            💡 点击地面移动，动物会跟随你
+          </div>
+        </div>
+      )}
+
+      {isWalkingMode && <AnimalSelectionPanel />}
+
       <div
         className="absolute animate-float pointer-events-none"
         style={{
@@ -322,6 +382,14 @@ const GameScene: React.FC = () => {
           </div>
         </div>
       )}
+
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+        {!isWalkingAnimals && !isWalkingMode && !selectedFood && (
+          <div className="bg-gradient-to-r from-blue-400 to-cyan-400 text-white px-4 py-2 rounded-full shadow-lg animate-pulse-slow text-sm font-medium">
+            🧑 点击你的角色开始带动物散步！
+          </div>
+        )}
+      </div>
 
       {miniGameOpen && currentGameAnimalId && currentGameInfo && (
         <MiniGameModal

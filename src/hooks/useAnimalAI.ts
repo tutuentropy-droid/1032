@@ -1,6 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '@/store/gameStore';
-import { BehaviorContext, ISLAND_INFO, Animal, Position, PathNode, EmotionType } from '@/types/game';
+import { BehaviorContext, ISLAND_INFO, Animal, Position, PathNode, FormationType } from '@/types/game';
 import { createBehaviorTree, executeNode } from '@/lib/behaviorTree';
 import { processEmotionChain } from '@/lib/emotionChain';
 
@@ -126,8 +126,110 @@ const decideDestination = (animal: Animal, animals: Animal[]): Position => {
   return clampPosition(destination);
 };
 
+const getFormationPosition = (
+  playerPos: Position,
+  playerDirection: 'left' | 'right',
+  formation: FormationType,
+  animalIndex: number,
+  totalAnimals: number
+): Position => {
+  const directionMultiplier = playerDirection === 'left' ? -1 : 1;
+  const spacing = 8;
+  const sideOffset = 6;
+
+  switch (formation) {
+    case 'single_file':
+      return {
+        x: playerPos.x - directionMultiplier * spacing * (animalIndex + 1),
+        y: playerPos.y + (animalIndex % 2 === 0 ? 2 : -2),
+      };
+
+    case 'side_by_side': {
+      const side = animalIndex % 2 === 0 ? 1 : -1;
+      const row = Math.floor(animalIndex / 2);
+      return {
+        x: playerPos.x + directionMultiplier * (sideOffset * side) - directionMultiplier * spacing * row * 0.5,
+        y: playerPos.y + 3 + row * 2,
+      };
+    }
+
+    case 'triangle': {
+      if (animalIndex === 0) {
+        return {
+          x: playerPos.x - directionMultiplier * spacing * 0.8,
+          y: playerPos.y + 3,
+        };
+      } else if (animalIndex === 1) {
+        return {
+          x: playerPos.x - directionMultiplier * spacing * 1.5 - sideOffset,
+          y: playerPos.y + 5,
+        };
+      } else {
+        return {
+          x: playerPos.x - directionMultiplier * spacing * 1.5 + sideOffset,
+          y: playerPos.y + 5,
+        };
+      }
+    }
+
+    case 'loose': {
+      const angle = (animalIndex / Math.max(totalAnimals, 1)) * Math.PI * 0.6 + Math.PI * 0.2;
+      const dist = spacing * (1 + animalIndex * 0.3);
+      return {
+        x: playerPos.x - directionMultiplier * Math.cos(angle) * dist,
+        y: playerPos.y + Math.sin(angle) * dist * 0.6 + 3,
+      };
+    }
+
+    default:
+      return {
+        x: playerPos.x - directionMultiplier * spacing * (animalIndex + 1),
+        y: playerPos.y,
+      };
+  }
+};
+
+const getCombinationSpeedMultiplier = (
+  animal: Animal,
+  comboName: string | null
+): number => {
+  if (!comboName) return 1;
+
+  switch (comboName) {
+    case 'funny_tempo':
+      if (animal.type === 'dog') return 1.4;
+      if (animal.type === 'hedgehog') return 0.6;
+      return 1;
+    case 'tortoise_hare':
+      if (animal.type === 'rabbit') return 1.3;
+      if (animal.type === 'turtle') return 0.5;
+      return 1;
+    case 'sleepy_excited':
+      if (animal.type === 'dog') return 1.5;
+      if (animal.type === 'bear') return 0.4;
+      return 1;
+    case 'happy_party':
+      return 1.2;
+    case 'calming':
+      return 0.7;
+    case 'chaos_harmony':
+      return 1 + (Math.random() - 0.5) * 0.4;
+    default:
+      return 1;
+  }
+};
+
 export const useAnimalAI = () => {
-  const { animals, updateAnimalPosition, setAnimalMoving, advanceAnimalPath, setAnimalPath, updateAnimal } = useGameStore();
+  const {
+    animals,
+    updateAnimalPosition,
+    setAnimalMoving,
+    advanceAnimalPath,
+    setAnimalPath,
+    updateAnimal,
+    setPlayerPosition,
+    setPlayerMoving,
+  } = useGameStore();
   const animationRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
   const lastBehaviorTickRef = useRef<number>(Date.now());
@@ -136,6 +238,7 @@ export const useAnimalAI = () => {
   const lastFusionCheckRef = useRef<number>(Date.now());
   const lastTimeAdvanceRef = useRef<number>(Date.now());
   const lastPathDecisionRef = useRef<Record<string, number>>({});
+  const lastCombinationParticleRef = useRef<number>(0);
 
   const behaviorTrees = useMemo(() => {
     const trees: Record<string, ReturnType<typeof createBehaviorTree>> = {};
@@ -154,6 +257,86 @@ export const useAnimalAI = () => {
       const delta = ((now - lastUpdateRef.current) / 1000) * timeScale;
       lastUpdateRef.current = now;
 
+      if (state.player.isMoving && state.player.targetPosition) {
+        const playerSpeed = 8 * timeScale;
+        const dx = state.player.targetPosition.x - state.player.position.x;
+        const dy = state.player.targetPosition.y - state.player.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 0.5) {
+          setPlayerPosition(state.player.targetPosition);
+          setPlayerMoving(false);
+        } else {
+          const moveX = (dx / distance) * playerSpeed * delta;
+          const moveY = (dy / distance) * playerSpeed * delta;
+          const newX = state.player.position.x + moveX;
+          const newY = state.player.position.y + moveY;
+          setPlayerPosition({ x: newX, y: newY });
+        }
+      }
+
+      if (state.player.isWalkingAnimals && state.selectedWalkingAnimals.length > 0) {
+        if (now - lastCombinationParticleRef.current > 800 && state.activeWalkingCombination) {
+          lastCombinationParticleRef.current = now;
+          const combo = state.activeWalkingCombination;
+          for (let i = 0; i < 2; i++) {
+            state.addParticle({
+              type: combo.particles[Math.floor(Math.random() * combo.particles.length)],
+              x: state.player.position.x + (Math.random() - 0.5) * 20,
+              y: state.player.position.y - 3 + (Math.random() - 0.5) * 10,
+              duration: 1000 + Math.random() * 500,
+              scale: 0.8 + Math.random() * 0.5,
+            });
+          }
+        }
+
+        state.selectedWalkingAnimals.forEach((animalId, index) => {
+          const animal = state.animals.find((a) => a.id === animalId);
+          if (!animal) return;
+
+          const targetPos = getFormationPosition(
+            state.player.position,
+            state.player.direction,
+            state.currentFormation,
+            index,
+            state.selectedWalkingAnimals.length
+          );
+
+          const comboMultiplier = getCombinationSpeedMultiplier(
+            animal,
+            state.activeWalkingCombination?.name || null
+          );
+          const speed = animal.moveSpeed * timeScale * comboMultiplier;
+
+          const dx = targetPos.x - animal.position.x;
+          const dy = targetPos.y - animal.position.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance > 1) {
+            const moveX = (dx / distance) * speed * delta;
+            const moveY = (dy / distance) * speed * delta;
+            const newX = animal.position.x + moveX;
+            const newY = animal.position.y + moveY;
+
+            const newDirection = dx < -0.1 ? 'left' : dx > 0.1 ? 'right' : animal.direction;
+
+            updateAnimal(animalId, {
+              position: { x: newX, y: newY },
+              isMoving: true,
+              animationState: 'walking',
+              direction: newDirection,
+              path: [],
+            });
+          } else {
+            updateAnimal(animalId, {
+              isMoving: false,
+              animationState: 'idle',
+              path: [],
+            });
+          }
+        });
+      }
+
       state.animals.forEach((animal) => {
         if (state.activeMiniGame && state.activeMiniGame.animalId === animal.id) return;
 
@@ -162,6 +345,10 @@ export const useAnimalAI = () => {
         if (animal.animationState === 'protesting' ||
             animal.animationState === 'playing_dead' ||
             animal.animationState === 'stubborn') {
+          return;
+        }
+
+        if (state.player.isWalkingAnimals && state.selectedWalkingAnimals.includes(animal.id)) {
           return;
         }
 

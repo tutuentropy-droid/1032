@@ -12,9 +12,12 @@ interface AnimalProps {
 }
 
 const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive = false }) => {
-  const { selectedFood, feedAnimal, petAnimal, fusedAnimals, currentIsland, startDragAnimal, updateDragPosition, endDragAnimal } = useGameStore();
+  const { selectedFood, feedAnimal, petAnimal, fusedAnimals, currentIsland, startDragAnimal, updateDragPosition, endDragAnimal, isWalkingMode, selectedWalkingAnimals, toggleAnimalForWalk, activeWalkingCombination } = useGameStore();
   const gameInfo = ANIMAL_MINI_GAMES[animal.type];
   const islandInfo = ISLAND_INFO[currentIsland];
+
+  const isSelectedForWalk = selectedWalkingAnimals.includes(animal.id);
+  const isBeingWalked = activeWalkingCombination !== null && selectedWalkingAnimals.includes(animal.id);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLocalDragging, setIsLocalDragging] = useState(false);
@@ -36,6 +39,27 @@ const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive
       case 'stubborn': return '我不走！🙅';
       case 'cooperate': return '好呀~😊';
       default: return '';
+    }
+  };
+
+  const getWalkCombinationClass = (): string => {
+    if (!activeWalkingCombination || !selectedWalkingAnimals.includes(animal.id)) return '';
+
+    switch (activeWalkingCombination.animation) {
+      case 'funny_tempo':
+        return animal.type === 'dog' ? 'animate-fast-bounce' : 'animate-slow-wobble';
+      case 'tortoise_hare':
+        return animal.type === 'rabbit' ? 'animate-hop-fast' : 'animate-slow-roll';
+      case 'sleepy_excited':
+        return animal.type === 'dog' ? 'animate-super-bounce' : 'animate-sleepy-drag';
+      case 'happy_party':
+        return 'animate-party-dance';
+      case 'calming':
+        return 'animate-calm-sway';
+      case 'chaos_harmony':
+        return 'animate-chaos-mix';
+      default:
+        return '';
     }
   };
 
@@ -162,6 +186,10 @@ const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive
     if (longPressTriggered || isLocalDragging) {
       return;
     }
+    if (isWalkingMode) {
+      toggleAnimalForWalk(animal.id);
+      return;
+    }
     if (selectedFood) {
       feedAnimal(animal.id);
     } else {
@@ -203,6 +231,11 @@ const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive
         ? 'animate-bounce-gentle'
         : '';
 
+  const walkComboClass = getWalkCombinationClass();
+  if (walkComboClass) {
+    extraAnimationClass = walkComboClass;
+  }
+
   if (animal.isDragged || isLocalDragging) {
     extraAnimationClass = 'animate-shake-drag';
   } else if (animal.animationState === 'protesting') {
@@ -220,27 +253,43 @@ const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive
   return (
     <div
       ref={containerRef}
-      className={`absolute ${!selectedFood && !miniGameActive && !isFused ? 'cursor-grab active:cursor-grabbing' : ''} transition-all duration-300 ease-out
-        ${selectedFood ? 'hover:scale-110' : 'hover:scale-105'}
+      className={`absolute transition-all duration-300 ease-out
+        ${isWalkingMode
+          ? 'cursor-pointer hover:scale-110'
+          : !selectedFood && !miniGameActive && !isFused
+            ? 'cursor-grab active:cursor-grabbing hover:scale-105'
+            : selectedFood
+              ? 'hover:scale-110'
+              : ''
+        }
         ${extraAnimationClass}
         ${isLocalDragging || animal.isDragged ? 'select-none pointer-events-none z-[1000]' : ''}
+        ${isSelectedForWalk ? 'ring-4 ring-yellow-400 rounded-full animate-pulse-slow' : ''}
+        ${isBeingWalked ? 'ring-2 ring-green-400 rounded-full' : ''}
       `}
       style={{
         left: `${animal.position.x}%`,
         top: `${animal.position.y}%`,
-        transform: `translate(-50%, -50%) ${isLocalDragging || animal.isDragged ? 'scale(1.15)' : ''}`,
+        transform: `translate(-50%, -50%) ${isLocalDragging || animal.isDragged ? 'scale(1.15)' : ''} ${isSelectedForWalk ? 'scale(1.05)' : ''}`,
         zIndex: isLocalDragging || animal.isDragged ? 9999 : miniGameActive ? 1 : Math.floor(animal.position.y) + (isFloating ? 100 : 0),
         opacity: miniGameActive ? 0.5 : isFused ? 0.3 : 1,
         transition: isLocalDragging || animal.isDragged ? 'none' : 'opacity 0.3s ease, transform 0.3s ease, left 0.1s linear, top 0.1s linear',
-        filter: isFused ? 'grayscale(50%) blur(1px)' : isSleepwalking ? 'blur(0.5px) brightness(1.1)' : undefined,
+        filter: isFused ? 'grayscale(50%) blur(1px)' : isSleepwalking ? 'blur(0.5px) brightness(1.1)' : isSelectedForWalk ? 'brightness(1.1)' : undefined,
         pointerEvents: isFused ? 'none' : undefined,
         touchAction: 'none',
         userSelect: 'none',
       }}
       onClick={handleClick}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
+      onMouseDown={isWalkingMode ? undefined : handleMouseDown}
+      onTouchStart={isWalkingMode ? undefined : handleTouchStart}
     >
+      {isSelectedForWalk && (
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap pointer-events-none">
+          <div className="bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full text-xs font-bold shadow-lg animate-bounce-gentle">
+            ✓ 已选择
+          </div>
+        </div>
+      )}
       {showReactionText && currentReaction && (
         <div
           className="absolute -top-16 left-1/2 -translate-x-1/2 z-50 whitespace-nowrap animate-reaction-pop pointer-events-none"

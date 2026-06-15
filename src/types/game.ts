@@ -10,6 +10,83 @@ export type FusionType = 'mechanical_fox' | 'lying_dolphin' | 'flame_cat' | 'cry
 export type IslandType = 'home' | 'rainy' | 'night' | 'antigravity' | 'dream' | 'slowtime';
 export type WeatherType = 'sunny' | 'rainy' | 'snowy' | 'foggy' | 'starry';
 export type TimeOfDay = 'dawn' | 'day' | 'dusk' | 'night';
+export type FormationType = 'single_file' | 'side_by_side' | 'triangle' | 'loose';
+
+export interface WalkingCombination {
+  types: AnimalType[];
+  emotions: EmotionType[];
+  name: string;
+  description: string;
+  animation: string;
+  particles: ParticleType[];
+}
+
+export interface Player {
+  position: Position;
+  targetPosition: Position | null;
+  isMoving: boolean;
+  direction: 'left' | 'right';
+  isWalkingAnimals: boolean;
+}
+
+export const WALKING_COMBINATIONS: WalkingCombination[] = [
+  {
+    types: ['dog', 'hedgehog'],
+    emotions: ['happy', 'anxious'],
+    name: '滑稽节奏',
+    description: '快乐狗 + 焦虑刺猬，一快一慢的滑稽节奏',
+    animation: 'funny_tempo',
+    particles: ['sparkle', 'sweat'],
+  },
+  {
+    types: ['dog', 'hedgehog'],
+    emotions: ['excited', 'anxious'],
+    name: '滑稽节奏',
+    description: '兴奋狗 + 焦虑刺猬，一快一慢的滑稽节奏',
+    animation: 'funny_tempo',
+    particles: ['sparkle', 'sweat'],
+  },
+  {
+    types: ['rabbit', 'turtle'],
+    emotions: ['happy', 'calm'],
+    name: '龟兔赛跑',
+    description: '快乐兔 + 淡定龟，经典速度差组合',
+    animation: 'tortoise_hare',
+    particles: ['star', 'sparkle'],
+  },
+  {
+    types: ['bear', 'dog'],
+    emotions: ['sleepy', 'excited'],
+    name: '动静反差',
+    description: '嗜睡熊 + 兴奋狗，一动一静的奇妙组合',
+    animation: 'sleepy_excited',
+    particles: ['zzz', 'light'],
+  },
+  {
+    types: ['rabbit', 'dog'],
+    emotions: ['happy', 'excited'],
+    name: '欢乐派对',
+    description: '快乐兔 + 兴奋狗，双倍快乐！',
+    animation: 'happy_party',
+    particles: ['heart', 'star', 'sparkle'],
+  },
+  {
+    types: ['hedgehog', 'turtle'],
+    emotions: ['anxious', 'calm'],
+    name: '定心丸',
+    description: '焦虑刺 + 淡定龟，慢慢就平静下来了',
+    animation: 'calming',
+    particles: ['sparkle', 'bubble'],
+  },
+  {
+    types: ['rabbit', 'hedgehog', 'dog'],
+    emotions: ['happy', 'anxious', 'excited'],
+    name: '混乱和谐',
+    description: '三种情绪的奇妙平衡',
+    animation: 'chaos_harmony',
+    particles: ['heart', 'sparkle', 'sweat'],
+  },
+];
 
 export interface FusedAnimal {
   id: string;
@@ -206,6 +283,11 @@ export interface GameState {
     position: Position;
     startedAt: number;
   } | null;
+  player: Player;
+  selectedWalkingAnimals: string[];
+  isWalkingMode: boolean;
+  currentFormation: FormationType;
+  activeWalkingCombination: WalkingCombination | null;
 }
 
 export interface GameActions {
@@ -239,6 +321,14 @@ export interface GameActions {
   endDragAnimal: (animalId: string, dropPosition: Position) => DragReactionType;
   setAnimalPath: (animalId: string, path: PathNode[]) => void;
   advanceAnimalPath: (animalId: string) => void;
+  toggleWalkingMode: () => void;
+  toggleAnimalForWalk: (animalId: string) => void;
+  setFormation: (formation: FormationType) => void;
+  setPlayerPosition: (position: Position) => void;
+  setPlayerMoving: (isMoving: boolean, target?: Position) => void;
+  startWalking: () => void;
+  stopWalking: () => void;
+  checkWalkingCombination: () => WalkingCombination | null;
 }
 
 export const FOOD_INFO: Record<FoodType, { name: string; emoji: string; happiness: number; hunger: number }> = {

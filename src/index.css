@@ -716,3 +716,156 @@ body {
 .animate-reaction-pop {
   animation: reaction-pop 0.4s ease-out forwards;
 }
+
+@keyframes fast-bounce {
+  0%, 100% { transform: translateY(0) scaleX(1); }
+  25% { transform: translateY(-8px) scaleX(1.05); }
+  50% { transform: translateY(0) scaleX(0.95); }
+  75% { transform: translateY(-6px) scaleX(1.02); }
+}
+
+@keyframes slow-wobble {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-2px) rotate(2deg); }
+}
+
+@keyframes hop-fast {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-12px) scale(1.1, 0.9); }
+  60% { transform: translateY(0) scale(0.95, 1.05); }
+}
+
+@keyframes slow-roll {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-1px) rotate(3deg); }
+}
+
+@keyframes super-bounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  20% { transform: translateY(-15px) rotate(-5deg) scale(1.1); }
+  40% { transform: translateY(0) rotate(5deg) scale(0.95); }
+  60% { transform: translateY(-10px) rotate(-3deg) scale(1.05); }
+  80% { transform: translateY(0) rotate(3deg) scale(0.98); }
+}
+
+@keyframes sleepy-drag {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.9; }
+  50% { transform: translateY(3px) rotate(-1deg); opacity: 0.85; }
+}
+
+@keyframes party-dance {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-8px) rotate(-8deg) scale(1.05); }
+  50% { transform: translateY(0) rotate(0deg) scale(1); }
+  75% { transform: translateY(-6px) rotate(8deg) scale(1.03); }
+}
+
+@keyframes calm-sway {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-2px) rotate(4deg); }
+}
+
+@keyframes chaos-mix {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  20% { transform: translateY(-5px) rotate(10deg) scale(1.05); }
+  40% { transform: translateY(2px) rotate(-8deg) scale(0.98); }
+  60% { transform: translateY(-8px) rotate(5deg) scale(1.02); }
+  80% { transform: translateY(1px) rotate(-3deg) scale(1); }
+}
+
+@keyframes funny-tempo {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-5px) scale(1.02); }
+}
+
+@keyframes tortoise-hare {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes sleepy-excited {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-2px) rotate(1deg); }
+  75% { transform: translateY(2px) rotate(-1deg); }
+}
+
+@keyframes happy-party {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-6px) rotate(-3deg) scale(1.02); }
+  75% { transform: translateY(-4px) rotate(3deg) scale(1.01); }
+}
+
+@keyframes calming {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-1px) rotate(2deg); }
+}
+
+@keyframes chaos-harmony {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-4px) rotate(5deg); }
+  66% { transform: translateY(2px) rotate(-4deg); }
+}
+
+.animate-fast-bounce {
+  animation: fast-bounce 0.3s ease-in-out infinite;
+}
+
+.animate-slow-wobble {
+  animation: slow-wobble 1.2s ease-in-out infinite;
+}
+
+.animate-hop-fast {
+  animation: hop-fast 0.35s ease-in-out infinite;
+}
+
+.animate-slow-roll {
+  animation: slow-roll 1.5s ease-in-out infinite;
+}
+
+.animate-super-bounce {
+  animation: super-bounce 0.4s ease-in-out infinite;
+}
+
+.animate-sleepy-drag {
+  animation: sleepy-drag 1.8s ease-in-out infinite;
+}
+
+.animate-party-dance {
+  animation: party-dance 0.5s ease-in-out infinite;
+}
+
+.animate-calm-sway {
+  animation: calm-sway 2s ease-in-out infinite;
+}
+
+.animate-chaos-mix {
+  animation: chaos-mix 0.6s ease-in-out infinite;
+}
+
+.animate-funny-tempo {
+  animation: funny-tempo 0.8s ease-in-out infinite;
+}
+
+.animate-tortoise-hare {
+  animation: tortoise-hare 1s ease-in-out infinite;
+}
+
+.animate-sleepy-excited {
+  animation: sleepy-excited 1.2s ease-in-out infinite;
+}
+
+.animate-happy-party {
+  animation: happy-party 0.6s ease-in-out infinite;
+}
+
+.animate-calming {
+  animation: calming 2.5s ease-in-out infinite;
+}
+
+.animate-chaos-harmony {
+  animation: chaos-harmony 0.9s ease-in-out infinite;
+}
+
+.cursor-crosshair {
+  cursor: crosshair;
+}

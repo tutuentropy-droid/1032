@@ -19,9 +19,10 @@ import {
   TimeOfDay,
   ISLAND_INFO,
   TIME_OF_DAY_CONFIG,
-  Position,
   DragReactionType,
-  PathNode,
+  FormationType,
+  WALKING_COMBINATIONS,
+  WalkingCombination,
 } from '@/types/game';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -162,6 +163,17 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   activeMiniGame: null,
   fusedAnimals: [],
   fusionAnimation: null,
+  player: {
+    position: { x: 50, y: 60 },
+    targetPosition: null,
+    isMoving: false,
+    direction: 'right',
+    isWalkingAnimals: false,
+  },
+  selectedWalkingAnimals: [],
+  isWalkingMode: false,
+  currentFormation: 'single_file',
+  activeWalkingCombination: null,
 
   setSelectedFood: (food) => set({ selectedFood: food }),
 
@@ -752,7 +764,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       }
     }
 
-    const animals = state.animals;
     const dropX = finalPosition.x;
     const dropY = finalPosition.y;
 
@@ -986,5 +997,172 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     const nextNode = animal.path[nextIndex];
     state.setAnimalMoving(animalId, true, nextNode.position);
+  },
+
+  toggleWalkingMode: () => {
+    const state = get();
+    if (state.isWalkingMode) {
+      get().stopWalking();
+    } else {
+      set({
+        isWalkingMode: true,
+        selectedWalkingAnimals: [],
+        activeWalkingCombination: null,
+      });
+    }
+  },
+
+  toggleAnimalForWalk: (animalId) => {
+    const state = get();
+    if (!state.isWalkingMode) return;
+
+    const animal = state.animals.find((a) => a.id === animalId);
+    if (!animal || animal.isDragged) return;
+
+    const isFused = state.fusedAnimals.some((f) => f.animalIds.includes(animalId));
+    if (isFused) return;
+
+    set((s) => {
+      const isSelected = s.selectedWalkingAnimals.includes(animalId);
+      let newSelected: string[];
+
+      if (isSelected) {
+        newSelected = s.selectedWalkingAnimals.filter((id) => id !== animalId);
+      } else {
+        if (s.selectedWalkingAnimals.length >= 3) {
+          return s;
+        }
+        newSelected = [...s.selectedWalkingAnimals, animalId];
+      }
+
+      return {
+        selectedWalkingAnimals: newSelected,
+      };
+    });
+  },
+
+  setFormation: (formation: FormationType) => {
+    set({ currentFormation: formation });
+  },
+
+  setPlayerPosition: (position) => {
+    set((s) => ({
+      player: { ...s.player, position },
+    }));
+  },
+
+  setPlayerMoving: (isMoving, target) => {
+    set((s) => {
+      const newDirection =
+        target && target.x < s.player.position.x
+          ? 'left'
+          : target && target.x > s.player.position.x
+            ? 'right'
+            : s.player.direction;
+      return {
+        player: {
+          ...s.player,
+          isMoving,
+          targetPosition: target || null,
+          direction: newDirection,
+        },
+      };
+    });
+  },
+
+  startWalking: () => {
+    const state = get();
+    if (state.selectedWalkingAnimals.length === 0) return;
+
+    const combination = get().checkWalkingCombination();
+
+    set({
+      isWalkingMode: false,
+      player: {
+        ...state.player,
+        isWalkingAnimals: true,
+      },
+      activeWalkingCombination: combination,
+    });
+
+    if (combination) {
+      for (let i = 0; i < 8; i++) {
+        setTimeout(() => {
+          get().addParticle({
+            type: combination.particles[Math.floor(Math.random() * combination.particles.length)],
+            x: state.player.position.x + (Math.random() - 0.5) * 15,
+            y: state.player.position.y - 5 + (Math.random() - 0.5) * 10,
+            duration: 1500 + Math.random() * 500,
+            scale: 1.2,
+          });
+        }, i * 100);
+      }
+    }
+  },
+
+  stopWalking: () => {
+    const state = get();
+    const walkingAnimalIds = [...state.selectedWalkingAnimals];
+
+    set({
+      isWalkingMode: false,
+      player: {
+        ...state.player,
+        isWalkingAnimals: false,
+        isMoving: false,
+        targetPosition: null,
+      },
+      selectedWalkingAnimals: [],
+      activeWalkingCombination: null,
+    });
+
+    walkingAnimalIds.forEach((animalId) => {
+      state.setAnimalMoving(animalId, false);
+      state.updateAnimal(animalId, {
+        path: [],
+        animationState: 'idle',
+      });
+    });
+  },
+
+  checkWalkingCombination: (): WalkingCombination | null => {
+    const state = get();
+    const selectedAnimals = state.selectedWalkingAnimals
+      .map((id) => state.animals.find((a) => a.id === id))
+      .filter((a): a is Animal => a !== undefined);
+
+    if (selectedAnimals.length < 2) return null;
+
+    const selectedTypes = selectedAnimals.map((a) => a.type).sort();
+    const selectedEmotions = selectedAnimals.map((a) => a.emotion).sort();
+
+    for (const combo of WALKING_COMBINATIONS) {
+      const comboTypes = [...combo.types].sort();
+      const comboEmotions = [...combo.emotions].sort();
+
+      const typesMatch =
+        selectedTypes.length === comboTypes.length &&
+        selectedTypes.every((t, i) => t === comboTypes[i]);
+
+      const emotionsMatch =
+        selectedEmotions.length === comboEmotions.length &&
+        selectedEmotions.every((e, i) => e === comboEmotions[i]);
+
+      if (typesMatch && emotionsMatch) {
+        return combo;
+      }
+
+      if (typesMatch && combo.types.length === 2) {
+        const reversedEmotions = [...combo.emotions].reverse();
+        const reverseEmotionsMatch =
+          selectedEmotions.length === reversedEmotions.length &&
+          selectedEmotions.every((e, i) => e === reversedEmotions[i]);
+        if (reverseEmotionsMatch) {
+          return combo;
+        }
+      }
+    }
+
+    return null;
   },
 }));
