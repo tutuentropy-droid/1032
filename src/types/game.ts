@@ -3,6 +3,9 @@ export type EmotionType = 'happy' | 'angry' | 'sleepy' | 'calm' | 'anxious' | 'e
 export type AnimationState = 'idle' | 'walking' | 'eating' | 'reacting' | 'scared' | 'glowing';
 export type FoodType = 'carrot' | 'apple' | 'fish' | 'honey';
 export type ParticleType = 'heart' | 'star' | 'sparkle' | 'zzz' | 'exclamation' | 'sweat' | 'light';
+export type MiniGameType = 'push_time_ball' | 'find_key' | 'catch_carrot' | 'memory_match' | 'catch_frisbee';
+export type MiniGameStatus = 'idle' | 'playing' | 'success' | 'failed';
+export type MiniGameResult = 'success' | 'failed' | null;
 
 export interface Position {
   x: number;
@@ -87,6 +90,13 @@ export interface GameState {
   particles: Particle[];
   timeOfDay: 'day';
   globalBrightness: number;
+  activeMiniGame: {
+    animalId: string;
+    gameType: MiniGameType;
+    status: MiniGameStatus;
+    score: number;
+    timeLeft: number;
+  } | null;
 }
 
 export interface GameActions {
@@ -101,6 +111,10 @@ export interface GameActions {
   setAnimationState: (animalId: string, state: AnimationState) => void;
   setGlobalBrightness: (brightness: number) => void;
   updateAnimal: (animalId: string, updates: Partial<Animal>) => void;
+  startMiniGame: (animalId: string, gameType: MiniGameType) => void;
+  endMiniGame: (result: MiniGameResult) => void;
+  updateMiniGameScore: (score: number) => void;
+  setMiniGameTimeLeft: (time: number) => void;
 }
 
 export const FOOD_INFO: Record<FoodType, { name: string; emoji: string; happiness: number; hunger: number }> = {
@@ -171,3 +185,61 @@ export const EMOTION_INFLUENCES: EmotionInfluence[] = [
     probability: 0.3,
   },
 ];
+
+export interface MiniGameInfo {
+  type: MiniGameType;
+  name: string;
+  description: string;
+  duration: number;
+  animalType: AnimalType;
+  targetEmotion: EmotionType;
+  icon: string;
+}
+
+export const ANIMAL_MINI_GAMES: Record<AnimalType, MiniGameInfo> = {
+  bear: {
+    type: 'push_time_ball',
+    name: '推回时间球',
+    description: '帮拖延的熊熊把滚走的时间球推回来！',
+    duration: 30,
+    animalType: 'bear',
+    targetEmotion: 'calm',
+    icon: '⏰',
+  },
+  hedgehog: {
+    type: 'find_key',
+    name: '寻找钥匙',
+    description: '帮焦虑的刺刺找到丢掉的钥匙！',
+    duration: 25,
+    animalType: 'hedgehog',
+    targetEmotion: 'calm',
+    icon: '🔑',
+  },
+  rabbit: {
+    type: 'catch_carrot',
+    name: '接胡萝卜',
+    description: '帮兔兔接住掉下来的胡萝卜！',
+    duration: 30,
+    animalType: 'rabbit',
+    targetEmotion: 'happy',
+    icon: '🥕',
+  },
+  turtle: {
+    type: 'memory_match',
+    name: '记忆配对',
+    description: '和慢慢一起玩记忆翻牌游戏！',
+    duration: 45,
+    animalType: 'turtle',
+    targetEmotion: 'calm',
+    icon: '🃏',
+  },
+  dog: {
+    type: 'catch_frisbee',
+    name: '接飞盘',
+    description: '和汪汪一起玩接飞盘游戏！',
+    duration: 30,
+    animalType: 'dog',
+    targetEmotion: 'excited',
+    icon: '🥏',
+  },
+};

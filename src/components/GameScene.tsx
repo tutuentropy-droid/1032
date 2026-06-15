@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { useAnimalAI } from '@/hooks/useAnimalAI';
+import { ANIMAL_MINI_GAMES } from '@/types/game';
 import IslandBackground from './IslandBackground';
 import Animal from './Animal';
 import FeedToolbar from './FeedToolbar';
 import Particle from './Particle';
+import MiniGameModal from './MiniGameModal';
 
 const GameScene: React.FC = () => {
-  const { animals, particles, selectedFood, setSelectedFood, globalBrightness } = useGameStore();
+  const { animals, particles, selectedFood, setSelectedFood, globalBrightness, startMiniGame } = useGameStore();
+  const [miniGameOpen, setMiniGameOpen] = useState(false);
+  const [currentGameAnimalId, setCurrentGameAnimalId] = useState<string | null>(null);
 
   useAnimalAI();
 
@@ -16,6 +20,25 @@ const GameScene: React.FC = () => {
       setSelectedFood(null);
     }
   };
+
+  const handleStartMiniGame = (animalId: string) => {
+    const animal = animals.find(a => a.id === animalId);
+    if (!animal) return;
+    const gameInfo = ANIMAL_MINI_GAMES[animal.type];
+    if (!gameInfo) return;
+    
+    setCurrentGameAnimalId(animalId);
+    setMiniGameOpen(true);
+    startMiniGame(animalId, gameInfo.type);
+  };
+
+  const handleCloseMiniGame = () => {
+    setMiniGameOpen(false);
+    setCurrentGameAnimalId(null);
+  };
+
+  const currentAnimal = animals.find(a => a.id === currentGameAnimalId);
+  const currentGameInfo = currentAnimal ? ANIMAL_MINI_GAMES[currentAnimal.type] : null;
 
   return (
     <div
@@ -71,7 +94,7 @@ const GameScene: React.FC = () => {
 
       {/* 动物们 */}
       {animals.map((animal) => (
-        <Animal key={animal.id} animal={animal} />
+        <Animal key={animal.id} animal={animal} onStartMiniGame={handleStartMiniGame} />
       ))}
 
       {/* 粒子特效 */}
@@ -124,6 +147,16 @@ const GameScene: React.FC = () => {
             <span className="text-sm text-gray-600 font-medium">投喂模式</span>
           </div>
         </div>
+      )}
+
+      {/* 小游戏模态框 */}
+      {miniGameOpen && currentGameAnimalId && currentGameInfo && (
+        <MiniGameModal
+          isOpen={miniGameOpen}
+          onClose={handleCloseMiniGame}
+          animalId={currentGameAnimalId}
+          gameType={currentGameInfo.type}
+        />
       )}
     </div>
   );

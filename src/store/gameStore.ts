@@ -8,6 +8,8 @@ import {
   GameActions,
   FOOD_INFO,
   ANIMAL_FOOD_PREFERENCES,
+  ANIMAL_MINI_GAMES,
+  MiniGameResult,
 } from '@/types/game';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -116,6 +118,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   particles: [],
   timeOfDay: 'day',
   globalBrightness: 1,
+  activeMiniGame: null,
 
   setSelectedFood: (food) => set({ selectedFood: food }),
 
@@ -321,5 +324,110 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         a.id === animalId ? { ...a, animationState: state } : a
       ),
     }));
+  },
+
+  startMiniGame: (animalId, gameType) => {
+    const gameInfo = Object.values(ANIMAL_MINI_GAMES).find(g => g.type === gameType);
+    if (!gameInfo) return;
+    set({
+      activeMiniGame: {
+        animalId,
+        gameType,
+        status: 'playing',
+        score: 0,
+        timeLeft: gameInfo.duration,
+      },
+    });
+  },
+
+  endMiniGame: (result: MiniGameResult) => {
+    const state = get();
+    const activeGame = state.activeMiniGame;
+    if (!activeGame) return;
+
+    const animal = state.animals.find(a => a.id === activeGame.animalId);
+    if (!animal) {
+      set({ activeMiniGame: null });
+      return;
+    }
+
+    const gameInfo = Object.values(ANIMAL_MINI_GAMES).find(g => g.type === activeGame.gameType);
+    if (!gameInfo) {
+      set({ activeMiniGame: null });
+      return;
+    }
+
+    if (result === 'success') {
+      const newHappiness = Math.min(100, animal.happiness + 30);
+      state.updateAnimal(animal.id, {
+        emotion: gameInfo.targetEmotion,
+        happiness: newHappiness,
+        animationState: 'glowing',
+        lastEmotionChange: Date.now(),
+      });
+
+      for (let i = 0; i < 10; i++) {
+        setTimeout(() => {
+          get().addParticle({
+            type: Math.random() > 0.5 ? 'star' : 'sparkle',
+            x: animal.position.x + (Math.random() - 0.5) * 15,
+            y: animal.position.y - 8 + Math.random() * 10,
+            duration: 2000 + Math.random() * 500,
+            scale: 1.5,
+          });
+        }, i * 100);
+      }
+
+      setTimeout(() => {
+        get().setAnimationState(animal.id, 'idle');
+      }, 3000);
+    } else {
+      state.updateAnimal(animal.id, {
+        animationState: 'scared',
+      });
+
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          get().addParticle({
+            type: 'sweat',
+            x: animal.position.x + (Math.random() - 0.5) * 8,
+            y: animal.position.y - 5 + Math.random() * 5,
+            duration: 1500,
+          });
+        }, i * 80);
+      }
+
+      setTimeout(() => {
+        get().setAnimationState(animal.id, 'idle');
+      }, 1500);
+    }
+
+    setTimeout(() => {
+      set({ activeMiniGame: null });
+    }, 500);
+  },
+
+  updateMiniGameScore: (score) => {
+    set((state) => {
+      if (!state.activeMiniGame) return state;
+      return {
+        activeMiniGame: {
+          ...state.activeMiniGame,
+          score,
+        },
+      };
+    });
+  },
+
+  setMiniGameTimeLeft: (time) => {
+    set((state) => {
+      if (!state.activeMiniGame) return state;
+      return {
+        activeMiniGame: {
+          ...state.activeMiniGame,
+          timeLeft: time,
+        },
+      };
+    });
   },
 }));

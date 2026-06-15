@@ -1,5 +1,5 @@
 import React from 'react';
-import { Animal as AnimalType, EMOTION_COLORS } from '@/types/game';
+import { Animal as AnimalType, EMOTION_COLORS, ANIMAL_MINI_GAMES } from '@/types/game';
 import AnimalSprite from './AnimalSprite';
 import EmotionBubble from './EmotionBubble';
 import { useGameStore } from '@/store/gameStore';
@@ -7,10 +7,12 @@ import { getEmotionAura } from '@/lib/emotionChain';
 
 interface AnimalProps {
   animal: AnimalType;
+  onStartMiniGame: (animalId: string) => void;
 }
 
-const Animal: React.FC<AnimalProps> = ({ animal }) => {
+const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame }) => {
   const { selectedFood, feedAnimal, petAnimal } = useGameStore();
+  const gameInfo = ANIMAL_MINI_GAMES[animal.type];
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -117,13 +119,28 @@ const Animal: React.FC<AnimalProps> = ({ animal }) => {
         className="absolute -bottom-2 left-1/2 -translate-x-1/2
           bg-white/80 backdrop-blur-sm rounded-full px-3 py-0.5
           text-xs font-bold text-gray-600 shadow-sm
-          border border-white/50"
+          border border-white/50 flex items-center gap-1"
         style={{
           borderTopColor: EMOTION_COLORS[animal.emotion],
           borderTopWidth: '2px',
         }}
       >
         {animal.name}
+        {!selectedFood && gameInfo && (
+          <button
+            className="ml-1 w-5 h-5 rounded-full bg-gradient-to-br from-pink-400 to-purple-400
+              flex items-center justify-center text-white text-xs
+              hover:scale-125 active:scale-95 transition-transform shadow-md
+              animate-pulse-slow"
+            onClick={(e) => {
+              e.stopPropagation();
+              onStartMiniGame(animal.id);
+            }}
+            title={`玩小游戏：${gameInfo.name}`}
+          >
+            🎮
+          </button>
+        )}
       </div>
 
       {/* 选中食物时的提示光圈 */}
