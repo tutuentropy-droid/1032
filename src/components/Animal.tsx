@@ -1,5 +1,5 @@
 import React from 'react';
-import { Animal as AnimalType, EMOTION_COLORS, ANIMAL_MINI_GAMES } from '@/types/game';
+import { Animal as AnimalType, EMOTION_COLORS, ANIMAL_MINI_GAMES, ISLAND_INFO } from '@/types/game';
 import AnimalSprite from './AnimalSprite';
 import EmotionBubble from './EmotionBubble';
 import { useGameStore } from '@/store/gameStore';
@@ -12,10 +12,13 @@ interface AnimalProps {
 }
 
 const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive = false }) => {
-  const { selectedFood, feedAnimal, petAnimal, fusedAnimals } = useGameStore();
+  const { selectedFood, feedAnimal, petAnimal, fusedAnimals, currentIsland } = useGameStore();
   const gameInfo = ANIMAL_MINI_GAMES[animal.type];
+  const islandInfo = ISLAND_INFO[currentIsland];
 
   const isFused = fusedAnimals.some(f => f.animalIds.includes(animal.id));
+  const isFloating = islandInfo.hasAntiGravity || animal.animationState === 'floating';
+  const isSleepwalking = islandInfo.hasSleepwalking || animal.animationState === 'sleepwalking';
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -30,20 +33,28 @@ const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive
   const aura = getEmotionAura(animal.emotion);
   const auraSize = (size + animal.emotionRadius * 3);
 
+  const extraAnimationClass = isFloating
+    ? 'animate-anti-gravity'
+    : isSleepwalking
+      ? 'animate-sleepwalking'
+      : animal.animationState === 'reacting'
+        ? 'animate-bounce-gentle'
+        : '';
+
   return (
     <div
       className={`absolute cursor-pointer transition-all duration-300 ease-out
         ${selectedFood ? 'hover:scale-110' : 'hover:scale-105'}
-        ${animal.animationState === 'reacting' ? 'animate-bounce-gentle' : ''}
+        ${extraAnimationClass}
       `}
       style={{
         left: `${animal.position.x}%`,
         top: `${animal.position.y}%`,
         transform: 'translate(-50%, -50%)',
-        zIndex: miniGameActive ? 1 : Math.floor(animal.position.y),
+        zIndex: miniGameActive ? 1 : Math.floor(animal.position.y) + (isFloating ? 100 : 0),
         opacity: miniGameActive ? 0.5 : isFused ? 0.3 : 1,
         transition: 'opacity 0.3s ease',
-        filter: isFused ? 'grayscale(50%) blur(1px)' : undefined,
+        filter: isFused ? 'grayscale(50%) blur(1px)' : isSleepwalking ? 'blur(0.5px) brightness(1.1)' : undefined,
         pointerEvents: isFused ? 'none' : undefined,
       }}
       onClick={handleClick}
@@ -107,6 +118,51 @@ const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive
             />
           ))}
         </div>
+      )}
+
+      {/* 梦游Z气泡 */}
+      {isSleepwalking && (
+        <>
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={`sleep-z-${i}`}
+              className="absolute animate-dream-z pointer-events-none"
+              style={{
+                left: `${60 + i * 15}%`,
+                top: `${-20 - i * 10}%`,
+                fontSize: `${14 + i * 4}px`,
+                fontWeight: 'bold',
+                color: '#9370DB',
+                textShadow: '1px 1px 2px rgba(255,255,255,0.8)',
+                animationDelay: `${i * 0.6}s`,
+                opacity: 0.8,
+              }}
+            >
+              💤
+            </div>
+          ))}
+        </>
+      )}
+
+      {/* 反重力悬浮粒子 */}
+      {isFloating && (
+        <>
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={`float-particle-${i}`}
+              className="absolute rounded-full pointer-events-none animate-sparkle"
+              style={{
+                left: `${20 + i * 18}%`,
+                top: `${80 + (i % 2) * 10}%`,
+                width: 4 + (i % 3),
+                height: 4 + (i % 3),
+                background: i % 2 === 0 ? '#C39BD3' : '#BB8FCE',
+                boxShadow: `0 0 6px 2px rgba(155, 89, 182, 0.5)`,
+                animationDelay: `${i * 0.3}s`,
+              }}
+            />
+          ))}
+        </>
       )}
 
       {/* 情绪气泡 */}

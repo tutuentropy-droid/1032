@@ -1,11 +1,14 @@
 export type AnimalType = 'rabbit' | 'hedgehog' | 'bear' | 'turtle' | 'dog';
 export type EmotionType = 'happy' | 'angry' | 'sleepy' | 'calm' | 'anxious' | 'excited';
-export type AnimationState = 'idle' | 'walking' | 'eating' | 'reacting' | 'scared' | 'glowing';
+export type AnimationState = 'idle' | 'walking' | 'eating' | 'reacting' | 'scared' | 'glowing' | 'sleepwalking' | 'floating';
 export type FoodType = 'carrot' | 'apple' | 'fish' | 'honey';
-export type ParticleType = 'heart' | 'star' | 'sparkle' | 'zzz' | 'exclamation' | 'sweat' | 'light';
+export type ParticleType = 'heart' | 'star' | 'sparkle' | 'zzz' | 'exclamation' | 'sweat' | 'light' | 'raindrop' | 'snowflake' | 'bubble' | 'firefly';
 export type MiniGameType = 'push_time_ball' | 'find_key' | 'catch_carrot' | 'memory_match' | 'catch_frisbee';
 export type MiniGameStatus = 'idle' | 'playing' | 'success' | 'failed';
 export type FusionType = 'mechanical_fox' | 'lying_dolphin' | 'flame_cat' | 'crystal_owl' | 'rainbow_deer';
+export type IslandType = 'home' | 'rainy' | 'night' | 'antigravity' | 'dream' | 'slowtime';
+export type WeatherType = 'sunny' | 'rainy' | 'snowy' | 'foggy' | 'starry';
+export type TimeOfDay = 'dawn' | 'day' | 'dusk' | 'night';
 
 export interface FusedAnimal {
   id: string;
@@ -173,8 +176,12 @@ export interface GameState {
   animals: Animal[];
   selectedFood: FoodType | null;
   particles: Particle[];
-  timeOfDay: 'day';
+  currentIsland: IslandType;
+  weather: WeatherType;
+  timeOfDay: TimeOfDay;
   globalBrightness: number;
+  isTransitioning: boolean;
+  targetIsland: IslandType | null;
   activeMiniGame: {
     animalId: string;
     gameType: MiniGameType;
@@ -211,6 +218,11 @@ export interface GameActions {
   removeFusion: (fusedAnimalId: string) => void;
   checkAndTriggerFusion: () => void;
   clearFusionAnimation: () => void;
+  travelToIsland: (island: IslandType) => void;
+  setWeather: (weather: WeatherType) => void;
+  setTimeOfDay: (time: TimeOfDay) => void;
+  advanceTimeOfDay: () => void;
+  completeIslandTransition: () => void;
 }
 
 export const FOOD_INFO: Record<FoodType, { name: string; emoji: string; happiness: number; hunger: number }> = {
@@ -338,4 +350,127 @@ export const ANIMAL_MINI_GAMES: Record<AnimalType, MiniGameInfo> = {
     targetEmotion: 'excited',
     icon: '🥏',
   },
+};
+
+export interface IslandInfo {
+  type: IslandType;
+  name: string;
+  description: string;
+  icon: string;
+  defaultWeather: WeatherType;
+  defaultTimeOfDay: TimeOfDay;
+  skyGradient: string;
+  grassColor: string;
+  grassSecondary: string;
+  waterColor: string;
+  specialRule: string;
+  timeScale: number;
+  hasSleepwalking: boolean;
+  hasAntiGravity: boolean;
+}
+
+export const ISLAND_INFO: Record<IslandType, IslandInfo> = {
+  home: {
+    type: 'home',
+    name: '初心岛',
+    description: '温暖阳光的起始之岛，一切冒险从这里开始',
+    icon: '🏝️',
+    defaultWeather: 'sunny',
+    defaultTimeOfDay: 'day',
+    skyGradient: 'linear-gradient(180deg, #87CEEB 0%, #B0E0E6 40%, #E0F7FA 100%)',
+    grassColor: '#90EE90',
+    grassSecondary: '#98FB98',
+    waterColor: '#87CEEB',
+    specialRule: 'normal',
+    timeScale: 1,
+    hasSleepwalking: false,
+    hasAntiGravity: false,
+  },
+  rainy: {
+    type: 'rainy',
+    name: '细雨岛',
+    description: '绵绵细雨的宁静之岛，雨滴在水面弹奏温柔的乐章',
+    icon: '🌧️',
+    defaultWeather: 'rainy',
+    defaultTimeOfDay: 'day',
+    skyGradient: 'linear-gradient(180deg, #6B7B8C 0%, #8B9BAB 40%, #A0B0C0 100%)',
+    grassColor: '#6B8E6B',
+    grassSecondary: '#7BA07B',
+    waterColor: '#5B8AA0',
+    specialRule: 'rainy',
+    timeScale: 1,
+    hasSleepwalking: false,
+    hasAntiGravity: false,
+  },
+  night: {
+    type: 'night',
+    name: '星夜岛',
+    description: '繁星点点的神秘之岛，萤火虫在空中翩翩起舞',
+    icon: '🌙',
+    defaultWeather: 'starry',
+    defaultTimeOfDay: 'night',
+    skyGradient: 'linear-gradient(180deg, #0D1B2A 0%, #1B263B 40%, #2C3E50 100%)',
+    grassColor: '#2D4A3E',
+    grassSecondary: '#3D5A4E',
+    waterColor: '#1A3A5C',
+    specialRule: 'night',
+    timeScale: 1,
+    hasSleepwalking: false,
+    hasAntiGravity: false,
+  },
+  antigravity: {
+    type: 'antigravity',
+    name: '浮空岛',
+    description: '反重力的奇幻之岛，所有东西都漂浮在半空中',
+    icon: '🪐',
+    defaultWeather: 'sunny',
+    defaultTimeOfDay: 'day',
+    skyGradient: 'linear-gradient(180deg, #9B59B6 0%, #8E44AD 40%, #C39BD3 100%)',
+    grassColor: '#7D6699',
+    grassSecondary: '#9B7FBB',
+    waterColor: '#BB8FCE',
+    specialRule: 'antigravity',
+    timeScale: 1,
+    hasSleepwalking: false,
+    hasAntiGravity: true,
+  },
+  dream: {
+    type: 'dream',
+    name: '梦境岛',
+    description: '如梦似幻的梦游之岛，动物们在睡梦中悠然漫步',
+    icon: '💭',
+    defaultWeather: 'foggy',
+    defaultTimeOfDay: 'dusk',
+    skyGradient: 'linear-gradient(180deg, #4A3070 0%, #7060A0 40%, #B0A0D0 100%)',
+    grassColor: '#6A5A8A',
+    grassSecondary: '#8A7AAA',
+    waterColor: '#7A6AAA',
+    specialRule: 'dream',
+    timeScale: 0.8,
+    hasSleepwalking: true,
+    hasAntiGravity: false,
+  },
+  slowtime: {
+    type: 'slowtime',
+    name: '悠缓岛',
+    description: '时间流速变慢的悠闲之岛，一切都慢慢发生',
+    icon: '⏳',
+    defaultWeather: 'sunny',
+    defaultTimeOfDay: 'dawn',
+    skyGradient: 'linear-gradient(180deg, #F39C12 0%, #E67E22 40%, #F5B041 100%)',
+    grassColor: '#B8A060',
+    grassSecondary: '#D8C080',
+    waterColor: '#D4AC6E',
+    specialRule: 'slowtime',
+    timeScale: 0.4,
+    hasSleepwalking: false,
+    hasAntiGravity: false,
+  },
+};
+
+export const TIME_OF_DAY_CONFIG: Record<TimeOfDay, { brightness: number; overlay: string; sunMoonOpacity: number; name: string }> = {
+  dawn: { brightness: 0.95, overlay: 'rgba(255, 180, 100, 0.1)', sunMoonOpacity: 0.9, name: '清晨' },
+  day: { brightness: 1, overlay: 'transparent', sunMoonOpacity: 1, name: '白天' },
+  dusk: { brightness: 0.9, overlay: 'rgba(255, 100, 50, 0.12)', sunMoonOpacity: 0.8, name: '黄昏' },
+  night: { brightness: 0.55, overlay: 'rgba(20, 30, 60, 0.35)', sunMoonOpacity: 0.95, name: '夜晚' },
 };

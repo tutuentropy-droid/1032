@@ -14,7 +14,11 @@ import {
   FUSION_NEGLECT_THRESHOLD,
   FUSION_PROXIMITY_THRESHOLD,
   FusedAnimal,
-  FusionType,
+  IslandType,
+  WeatherType,
+  TimeOfDay,
+  ISLAND_INFO,
+  TIME_OF_DAY_CONFIG,
 } from '@/types/game';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -121,8 +125,12 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   animals: initialAnimals,
   selectedFood: null,
   particles: [],
+  currentIsland: 'home',
+  weather: 'sunny',
   timeOfDay: 'day',
   globalBrightness: 1,
+  isTransitioning: false,
+  targetIsland: null,
   activeMiniGame: null,
   fusedAnimals: [],
   fusionAnimation: null,
@@ -568,5 +576,65 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
   clearFusionAnimation: () => {
     set({ fusionAnimation: null });
+  },
+
+  travelToIsland: (island: IslandType) => {
+    const state = get();
+    if (state.isTransitioning || state.currentIsland === island) return;
+
+    const islandInfo = ISLAND_INFO[island];
+    set({
+      isTransitioning: true,
+      targetIsland: island,
+    });
+
+    setTimeout(() => {
+      set({
+        currentIsland: island,
+        weather: islandInfo.defaultWeather,
+        timeOfDay: islandInfo.defaultTimeOfDay,
+        globalBrightness: TIME_OF_DAY_CONFIG[islandInfo.defaultTimeOfDay].brightness,
+        particles: [],
+      });
+
+      const s = get();
+      s.animals.forEach((animal) => {
+        if (islandInfo.hasSleepwalking) {
+          s.setAnimationState(animal.id, 'sleepwalking');
+        } else if (islandInfo.hasAntiGravity) {
+          s.setAnimationState(animal.id, 'floating');
+        } else {
+          s.setAnimationState(animal.id, 'idle');
+        }
+      });
+    }, 2500);
+  },
+
+  completeIslandTransition: () => {
+    set({
+      isTransitioning: false,
+      targetIsland: null,
+    });
+  },
+
+  setWeather: (weather: WeatherType) => {
+    set({ weather });
+  },
+
+  setTimeOfDay: (time: TimeOfDay) => {
+    const config = TIME_OF_DAY_CONFIG[time];
+    set({
+      timeOfDay: time,
+      globalBrightness: config.brightness,
+    });
+  },
+
+  advanceTimeOfDay: () => {
+    const state = get();
+    const order: TimeOfDay[] = ['dawn', 'day', 'dusk', 'night'];
+    const currentIndex = order.indexOf(state.timeOfDay);
+    const nextIndex = (currentIndex + 1) % order.length;
+    const nextTime = order[nextIndex];
+    get().setTimeOfDay(nextTime);
   },
 }));
