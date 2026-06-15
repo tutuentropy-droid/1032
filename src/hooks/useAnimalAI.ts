@@ -11,6 +11,7 @@ export const useAnimalAI = () => {
   const lastBehaviorTickRef = useRef<number>(Date.now());
   const lastEmotionTickRef = useRef<number>(Date.now());
   const lastHungerTickRef = useRef<number>(Date.now());
+  const lastFusionCheckRef = useRef<number>(Date.now());
 
   const behaviorTrees = useMemo(() => {
     const trees: Record<string, ReturnType<typeof createBehaviorTree>> = {};
@@ -89,6 +90,11 @@ export const useAnimalAI = () => {
             lastFedTime: newHunger > animal.hunger + 0.5 ? animal.lastFedTime : animal.lastFedTime,
           });
         });
+      }
+
+      if (now - lastFusionCheckRef.current > 3000) {
+        lastFusionCheckRef.current = now;
+        useGameStore.getState().checkAndTriggerFusion();
       }
 
       animationRef.current = requestAnimationFrame(animate);

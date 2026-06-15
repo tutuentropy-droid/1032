@@ -12,8 +12,10 @@ interface AnimalProps {
 }
 
 const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive = false }) => {
-  const { selectedFood, feedAnimal, petAnimal } = useGameStore();
+  const { selectedFood, feedAnimal, petAnimal, fusedAnimals } = useGameStore();
   const gameInfo = ANIMAL_MINI_GAMES[animal.type];
+
+  const isFused = fusedAnimals.some(f => f.animalIds.includes(animal.id));
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -39,8 +41,10 @@ const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive
         top: `${animal.position.y}%`,
         transform: 'translate(-50%, -50%)',
         zIndex: miniGameActive ? 1 : Math.floor(animal.position.y),
-        opacity: miniGameActive ? 0.5 : 1,
+        opacity: miniGameActive ? 0.5 : isFused ? 0.3 : 1,
         transition: 'opacity 0.3s ease',
+        filter: isFused ? 'grayscale(50%) blur(1px)' : undefined,
+        pointerEvents: isFused ? 'none' : undefined,
       }}
       onClick={handleClick}
     >

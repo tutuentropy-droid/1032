@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { useAnimalAI } from '@/hooks/useAnimalAI';
-import { ANIMAL_MINI_GAMES } from '@/types/game';
+import { ANIMAL_MINI_GAMES, FUSION_COMBOS } from '@/types/game';
 import IslandBackground from './IslandBackground';
 import Animal from './Animal';
 import FeedToolbar from './FeedToolbar';
 import Particle from './Particle';
 import MiniGameModal from './MiniGameModal';
+import FusedAnimalSprite from './FusedAnimalSprite';
+import FusionAnimation from './FusionAnimation';
 
 const GameScene: React.FC = () => {
-  const { animals, particles, selectedFood, setSelectedFood, globalBrightness, startMiniGame } = useGameStore();
+  const { animals, particles, selectedFood, setSelectedFood, globalBrightness, startMiniGame, fusedAnimals } = useGameStore();
   const [miniGameOpen, setMiniGameOpen] = useState(false);
   const [currentGameAnimalId, setCurrentGameAnimalId] = useState<string | null>(null);
 
@@ -26,7 +28,7 @@ const GameScene: React.FC = () => {
     if (!animal) return;
     const gameInfo = ANIMAL_MINI_GAMES[animal.type];
     if (!gameInfo) return;
-    
+
     setCurrentGameAnimalId(animalId);
     setMiniGameOpen(true);
     startMiniGame(animalId, gameInfo.type);
@@ -40,6 +42,8 @@ const GameScene: React.FC = () => {
   const currentAnimal = animals.find(a => a.id === currentGameAnimalId);
   const currentGameInfo = currentAnimal ? ANIMAL_MINI_GAMES[currentAnimal.type] : null;
 
+  const activeFusionTypes = fusedAnimals.map(f => f.fusionType);
+
   return (
     <div
       className={`game-container ${selectedFood ? 'cursor-feed' : ''}`}
@@ -49,9 +53,8 @@ const GameScene: React.FC = () => {
         transition: 'filter 1s ease-in-out',
       }}
     >
-      <IslandBackground />
+      <IslandBackground activeFusions={activeFusionTypes} />
 
-      {/* 全局亮度指示（微妙的整体色调） */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -64,7 +67,6 @@ const GameScene: React.FC = () => {
         }}
       />
 
-      {/* 标题 */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 text-center">
         <h1
           className="text-4xl md:text-5xl font-bold text-white drop-shadow-lg
@@ -89,20 +91,74 @@ const GameScene: React.FC = () => {
           <span className="text-xs bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-white/90">
             ✨ 汪汪兴奋时会发光
           </span>
+          <span className="text-xs bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-white/90">
+            🧬 长期忽视情绪会触发融合
+          </span>
         </div>
       </div>
 
-      {/* 动物们 */}
-      {animals.map((animal) => (
-        <Animal
-          key={animal.id}
-          animal={animal}
-          onStartMiniGame={handleStartMiniGame}
-          miniGameActive={miniGameOpen}
-        />
-      ))}
+      {animals.map((animal) => {
+        const isFused = fusedAnimals.some(f => f.animalIds.includes(animal.id));
+        return (
+          <Animal
+            key={animal.id}
+            animal={animal}
+            onStartMiniGame={handleStartMiniGame}
+            miniGameActive={miniGameOpen}
+          />
+        );
+      })}
 
-      {/* 粒子特效 */}
+      {fusedAnimals.map((fused) => {
+        const combo = FUSION_COMBOS.find(c => c.type === fused.fusionType);
+        if (!combo) return null;
+        return (
+          <div
+            key={fused.id}
+            className="absolute cursor-pointer transition-all duration-300 ease-out hover:scale-110"
+            style={{
+              left: `${fused.position.x}%`,
+              top: `${fused.position.y}%`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: Math.floor(fused.position.y) + 10,
+            }}
+          >
+            <div
+              className="absolute rounded-full pointer-events-none"
+              style={{
+                width: 220,
+                height: 220,
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                background: `radial-gradient(circle, ${combo.environmentGlow} 0%, transparent 70%)`,
+                animation: 'aura-pulse 2s ease-in-out infinite',
+                zIndex: -1,
+              }}
+            />
+            <FusedAnimalSprite
+              type={fused.fusionType}
+              direction={fused.direction}
+              size={140 * fused.scale}
+            />
+            <div
+              className="absolute -bottom-2 left-1/2 -translate-x-1/2
+                bg-white/90 backdrop-blur-sm rounded-full px-3 py-1
+                text-xs font-bold text-gray-700 shadow-md
+                border-2 flex items-center gap-1"
+              style={{
+                borderColor: combo.environmentGlow.replace('0.3', '0.8'),
+              }}
+            >
+              <span>{combo.emoji}</span>
+              <span>{combo.name}</span>
+            </div>
+          </div>
+        );
+      })}
+
+      <FusionAnimation />
+
       {particles.map((particle) => (
         <Particle
           key={particle.id}
@@ -115,10 +171,8 @@ const GameScene: React.FC = () => {
         />
       ))}
 
-      {/* 喂食工具栏 */}
       <FeedToolbar />
 
-      {/* 装饰性花朵和蝴蝶（随机位置） */}
       <div
         className="absolute animate-float pointer-events-none"
         style={{
@@ -140,7 +194,6 @@ const GameScene: React.FC = () => {
         <span className="text-2xl opacity-60">🐝</span>
       </div>
 
-      {/* 食物跟随鼠标提示（选中食物时显示） */}
       {selectedFood && (
         <div className="fixed top-4 right-4 z-50 pointer-events-none">
           <div
@@ -154,7 +207,6 @@ const GameScene: React.FC = () => {
         </div>
       )}
 
-      {/* 小游戏模态框 */}
       {miniGameOpen && currentGameAnimalId && currentGameInfo && (
         <MiniGameModal
           isOpen={miniGameOpen}

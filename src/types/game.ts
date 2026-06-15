@@ -5,6 +5,91 @@ export type FoodType = 'carrot' | 'apple' | 'fish' | 'honey';
 export type ParticleType = 'heart' | 'star' | 'sparkle' | 'zzz' | 'exclamation' | 'sweat' | 'light';
 export type MiniGameType = 'push_time_ball' | 'find_key' | 'catch_carrot' | 'memory_match' | 'catch_frisbee';
 export type MiniGameStatus = 'idle' | 'playing' | 'success' | 'failed';
+export type FusionType = 'mechanical_fox' | 'lying_dolphin' | 'flame_cat' | 'crystal_owl' | 'rainbow_deer';
+
+export interface FusedAnimal {
+  id: string;
+  fusionType: FusionType;
+  animalIds: [string, string];
+  position: Position;
+  createdAt: number;
+  direction: 'left' | 'right';
+  scale: number;
+}
+
+export interface FusionCombo {
+  type: FusionType;
+  emotion1: EmotionType;
+  emotion2: EmotionType;
+  name: string;
+  description: string;
+  emoji: string;
+  environmentTint: string;
+  environmentGlow: string;
+  particles: ParticleType[];
+}
+
+export const FUSION_COMBOS: FusionCombo[] = [
+  {
+    type: 'mechanical_fox',
+    emotion1: 'anxious',
+    emotion2: 'calm',
+    name: '机械狐狸',
+    description: '焦虑与克制的融合产物，手持放大镜审视一切细节',
+    emoji: '🔍',
+    environmentTint: 'rgba(180, 180, 200, 0.15)',
+    environmentGlow: 'rgba(100, 150, 255, 0.3)',
+    particles: ['sparkle', 'light'],
+  },
+  {
+    type: 'lying_dolphin',
+    emotion1: 'happy',
+    emotion2: 'sleepy',
+    name: '躺平海豚',
+    description: '快乐与拖延的融合产物，只想躺平享受生活',
+    emoji: '🐬',
+    environmentTint: 'rgba(255, 200, 150, 0.15)',
+    environmentGlow: 'rgba(255, 180, 100, 0.3)',
+    particles: ['heart', 'zzz'],
+  },
+  {
+    type: 'flame_cat',
+    emotion1: 'angry',
+    emotion2: 'excited',
+    name: '火焰猫',
+    description: '愤怒与兴奋的融合产物，浑身燃烧着战斗的烈焰',
+    emoji: '🔥',
+    environmentTint: 'rgba(255, 100, 50, 0.15)',
+    environmentGlow: 'rgba(255, 80, 30, 0.3)',
+    particles: ['light', 'star'],
+  },
+  {
+    type: 'crystal_owl',
+    emotion1: 'anxious',
+    emotion2: 'sleepy',
+    name: '水晶猫头鹰',
+    description: '焦虑与疲惫的融合产物，在深夜中凝视你的灵魂',
+    emoji: '🦉',
+    environmentTint: 'rgba(150, 130, 200, 0.2)',
+    environmentGlow: 'rgba(120, 80, 200, 0.35)',
+    particles: ['sparkle', 'star'],
+  },
+  {
+    type: 'rainbow_deer',
+    emotion1: 'calm',
+    emotion2: 'excited',
+    name: '彩虹鹿',
+    description: '平静与兴奋的融合产物，散发着绚丽的七彩光芒',
+    emoji: '🦌',
+    environmentTint: 'rgba(200, 150, 255, 0.12)',
+    environmentGlow: 'rgba(180, 100, 255, 0.25)',
+    particles: ['heart', 'sparkle', 'light'],
+  },
+];
+
+export const FUSION_NEGLECT_THRESHOLD = 30000;
+export const FUSION_PROXIMITY_THRESHOLD = 25;
+
 export type MiniGameResult = 'success' | 'failed' | null;
 
 export interface Position {
@@ -97,6 +182,12 @@ export interface GameState {
     score: number;
     timeLeft: number;
   } | null;
+  fusedAnimals: FusedAnimal[];
+  fusionAnimation: {
+    type: FusionType;
+    position: Position;
+    startedAt: number;
+  } | null;
 }
 
 export interface GameActions {
@@ -116,6 +207,10 @@ export interface GameActions {
   clearMiniGame: () => void;
   updateMiniGameScore: (score: number) => void;
   setMiniGameTimeLeft: (time: number) => void;
+  createFusion: (animal1Id: string, animal2Id: string, fusionType: FusionType) => void;
+  removeFusion: (fusedAnimalId: string) => void;
+  checkAndTriggerFusion: () => void;
+  clearFusionAnimation: () => void;
 }
 
 export const FOOD_INFO: Record<FoodType, { name: string; emoji: string; happiness: number; hunger: number }> = {

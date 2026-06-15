@@ -10,6 +10,11 @@ import {
   ANIMAL_FOOD_PREFERENCES,
   ANIMAL_MINI_GAMES,
   MiniGameResult,
+  FUSION_COMBOS,
+  FUSION_NEGLECT_THRESHOLD,
+  FUSION_PROXIMITY_THRESHOLD,
+  FusedAnimal,
+  FusionType,
 } from '@/types/game';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -119,6 +124,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   timeOfDay: 'day',
   globalBrightness: 1,
   activeMiniGame: null,
+  fusedAnimals: [],
+  fusionAnimation: null,
 
   setSelectedFood: (food) => set({ selectedFood: food }),
 
@@ -431,5 +438,135 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         },
       };
     });
+  },
+
+  createFusion: (animal1Id, animal2Id, fusionType) => {
+    const state = get();
+    const animal1 = state.animals.find(a => a.id === animal1Id);
+    const animal2 = state.animals.find(a => a.id === animal2Id);
+    if (!animal1 || !animal2) return;
+
+    const alreadyFused = state.fusedAnimals.some(f =>
+      f.animalIds.includes(animal1Id) || f.animalIds.includes(animal2Id)
+    );
+    if (alreadyFused) return;
+
+    const combo = FUSION_COMBOS.find(c => c.type === fusionType);
+    if (!combo) return;
+
+    const midX = (animal1.position.x + animal2.position.x) / 2;
+    const midY = (animal1.position.y + animal2.position.y) / 2;
+
+    const fused: FusedAnimal = {
+      id: generateId(),
+      fusionType,
+      animalIds: [animal1Id, animal2Id],
+      position: { x: midX, y: midY },
+      createdAt: Date.now(),
+      direction: Math.random() > 0.5 ? 'left' : 'right',
+      scale: 1.2,
+    };
+
+    set({
+      fusedAnimals: [...state.fusedAnimals, fused],
+      fusionAnimation: {
+        type: fusionType,
+        position: { x: midX, y: midY },
+        startedAt: Date.now(),
+      },
+      animals: state.animals.map(a => {
+        if (a.id === animal1Id || a.id === animal2Id) {
+          return {
+            ...a,
+            animationState: 'glowing' as AnimationState,
+            targetPosition: { x: midX, y: midY },
+            isMoving: true,
+          };
+        }
+        return a;
+      }),
+    });
+
+    for (let i = 0; i < 20; i++) {
+      const delay = i * 80;
+      setTimeout(() => {
+        get().addParticle({
+          type: combo.particles[Math.floor(Math.random() * combo.particles.length)],
+          x: midX + (Math.random() - 0.5) * 20,
+          y: midY - 5 + (Math.random() - 0.5) * 15,
+          duration: 2000 + Math.random() * 500,
+          scale: 1.5,
+        });
+      }, delay);
+    }
+
+    setTimeout(() => {
+      get().clearFusionAnimation();
+      const s = get();
+      s.animals.forEach(a => {
+        if (a.id === animal1Id || a.id === animal2Id) {
+          s.setAnimationState(a.id, 'idle');
+          s.setAnimalMoving(a.id, false);
+        }
+      });
+    }, 3000);
+  },
+
+  removeFusion: (fusedAnimalId) => {
+    const state = get();
+    const fused = state.fusedAnimals.find(f => f.id === fusedAnimalId);
+    if (!fused) return;
+
+    set({
+      fusedAnimals: state.fusedAnimals.filter(f => f.id !== fusedAnimalId),
+    });
+  },
+
+  checkAndTriggerFusion: () => {
+    const state = get();
+    if (state.fusionAnimation) return;
+    if (state.fusedAnimals.length >= 3) return;
+
+    const now = Date.now();
+    const animals = state.animals;
+
+    for (const combo of FUSION_COMBOS) {
+      const animal1 = animals.find(a =>
+        a.emotion === combo.emotion1 &&
+        (now - a.lastEmotionChange) > FUSION_NEGLECT_THRESHOLD &&
+        !state.fusedAnimals.some(f => f.animalIds.includes(a.id))
+      );
+      const animal2 = animals.find(a =>
+        a.id !== (animal1?.id) &&
+        a.emotion === combo.emotion2 &&
+        (now - a.lastEmotionChange) > FUSION_NEGLECT_THRESHOLD &&
+        !state.fusedAnimals.some(f => f.animalIds.includes(a.id))
+      );
+
+      if (animal1 && animal2) {
+        const dx = animal1.position.x - animal2.position.x;
+        const dy = animal1.position.y - animal2.position.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < FUSION_PROXIMITY_THRESHOLD) {
+          get().createFusion(animal1.id, animal2.id, combo.type);
+          return;
+        }
+
+        get().setAnimalMoving(animal1.id, true, {
+          x: (animal1.position.x + animal2.position.x) / 2,
+          y: (animal1.position.y + animal2.position.y) / 2,
+        });
+        get().setAnimalMoving(animal2.id, true, {
+          x: (animal1.position.x + animal2.position.x) / 2,
+          y: (animal1.position.y + animal2.position.y) / 2,
+        });
+        return;
+      }
+    }
+  },
+
+  clearFusionAnimation: () => {
+    set({ fusionAnimation: null });
   },
 }));

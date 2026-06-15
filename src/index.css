@@ -331,3 +331,94 @@ body {
 .animate-pulse-slow {
   animation: pulse-slow 2s ease-in-out infinite;
 }
+
+@keyframes fusion-spiral {
+  0% { transform: scale(0.3) rotate(0deg); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: scale(1) rotate(720deg); opacity: 0.8; }
+}
+
+@keyframes fusion-pulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+@keyframes fusion-orbit {
+  0% { transform: rotate(0deg) translateX(60px) rotate(0deg) scale(1); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: rotate(360deg) translateX(20px) rotate(-360deg) scale(0.3); opacity: 0; }
+}
+
+@keyframes fusion-burst {
+  0% { transform: scale(0.2); opacity: 0; }
+  40% { transform: scale(1.2); opacity: 1; }
+  60% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes fusion-shard {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx, 80px), var(--ty, -60px)) scale(0.2); opacity: 0; }
+}
+
+@keyframes fusion-ring {
+  0% { transform: scale(0.5); opacity: 1; border-width: 4px; }
+  100% { transform: scale(2.5); opacity: 0; border-width: 1px; }
+}
+
+@keyframes fusion-reveal {
+  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+  50% { transform: scale(1.1) rotate(10deg); opacity: 1; }
+  70% { transform: scale(0.95) rotate(-5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes fusion-name {
+  0% { transform: translate(-50%, 10px); opacity: 0; }
+  60% { transform: translate(-50%, -5px); opacity: 1; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+
+@keyframes fusion-env-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+.animate-fusion-spiral {
+  animation: fusion-spiral 0.8s ease-out forwards;
+}
+
+.animate-fusion-pulse {
+  animation: fusion-pulse 0.6s ease-in-out infinite;
+}
+
+.animate-fusion-orbit {
+  animation: fusion-orbit 0.6s ease-in-out forwards;
+}
+
+.animate-fusion-burst {
+  animation: fusion-burst 0.8s ease-out forwards;
+}
+
+.animate-fusion-shard {
+  animation: fusion-shard 0.8s ease-out forwards;
+  --tx: calc((var(--random, 0.5) - 0.5) * 160px);
+  --ty: calc((var(--random, 0.5) - 0.5) * 160px);
+}
+
+.animate-fusion-ring {
+  animation: fusion-ring 0.8s ease-out forwards;
+}
+
+.animate-fusion-reveal {
+  animation: fusion-reveal 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-fusion-name {
+  animation: fusion-name 0.6s ease-out forwards;
+}
+
+.animate-fusion-env-pulse {
+  animation: fusion-env-pulse 4s ease-in-out infinite;
+}
