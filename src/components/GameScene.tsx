@@ -207,6 +207,9 @@ const GameScene: React.FC = () => {
         <span className="text-xs bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-white/90">
           🚤 左上角可以前往其他岛屿
         </span>
+        <span className="text-xs bg-yellow-400/40 backdrop-blur-sm rounded-full px-3 py-1 text-white/95">
+          ✋ 长按动物可以拖拽移动
+        </span>
       </div>
 
       {animals.map((animal) => {

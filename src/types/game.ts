@@ -1,6 +1,7 @@
 export type AnimalType = 'rabbit' | 'hedgehog' | 'bear' | 'turtle' | 'dog';
 export type EmotionType = 'happy' | 'angry' | 'sleepy' | 'calm' | 'anxious' | 'excited';
-export type AnimationState = 'idle' | 'walking' | 'eating' | 'reacting' | 'scared' | 'glowing' | 'sleepwalking' | 'floating';
+export type AnimationState = 'idle' | 'walking' | 'eating' | 'reacting' | 'scared' | 'glowing' | 'sleepwalking' | 'floating' | 'dragged' | 'protesting' | 'playing_dead' | 'stubborn' | 'escaping';
+export type DragReactionType = 'protest' | 'escape' | 'play_dead' | 'stubborn' | 'cooperate';
 export type FoodType = 'carrot' | 'apple' | 'fish' | 'honey';
 export type ParticleType = 'heart' | 'star' | 'sparkle' | 'zzz' | 'exclamation' | 'sweat' | 'light' | 'raindrop' | 'snowflake' | 'bubble' | 'firefly';
 export type MiniGameType = 'push_time_ball' | 'find_key' | 'catch_carrot' | 'memory_match' | 'catch_frisbee';
@@ -100,6 +101,11 @@ export interface Position {
   y: number;
 }
 
+export interface PathNode {
+  position: Position;
+  arrived: boolean;
+}
+
 export interface Animal {
   id: string;
   name: string;
@@ -118,6 +124,11 @@ export interface Animal {
   emotionStrength: number;
   moveSpeed: number;
   lastEmotionChange: number;
+  isDragged: boolean;
+  dragReaction: DragReactionType | null;
+  path: PathNode[];
+  lastDragTime: number;
+  destinationPreference: 'quiet' | 'social' | 'food' | 'random' | null;
 }
 
 export interface Particle {
@@ -223,6 +234,11 @@ export interface GameActions {
   setTimeOfDay: (time: TimeOfDay) => void;
   advanceTimeOfDay: () => void;
   completeIslandTransition: () => void;
+  startDragAnimal: (animalId: string) => void;
+  updateDragPosition: (animalId: string, position: Position) => void;
+  endDragAnimal: (animalId: string, dropPosition: Position) => DragReactionType;
+  setAnimalPath: (animalId: string, path: PathNode[]) => void;
+  advanceAnimalPath: (animalId: string) => void;
 }
 
 export const FOOD_INFO: Record<FoodType, { name: string; emoji: string; happiness: number; hunger: number }> = {

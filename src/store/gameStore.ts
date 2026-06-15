@@ -19,6 +19,9 @@ import {
   TimeOfDay,
   ISLAND_INFO,
   TIME_OF_DAY_CONFIG,
+  Position,
+  DragReactionType,
+  PathNode,
 } from '@/types/game';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -42,6 +45,11 @@ const initialAnimals: Animal[] = [
     emotionStrength: 60,
     moveSpeed: 10,
     lastEmotionChange: 0,
+    isDragged: false,
+    dragReaction: null,
+    path: [],
+    lastDragTime: 0,
+    destinationPreference: 'social',
   },
   {
     id: 'hedgehog-1',
@@ -61,6 +69,11 @@ const initialAnimals: Animal[] = [
     emotionStrength: 85,
     moveSpeed: 14,
     lastEmotionChange: 0,
+    isDragged: false,
+    dragReaction: null,
+    path: [],
+    lastDragTime: 0,
+    destinationPreference: 'quiet',
   },
   {
     id: 'bear-1',
@@ -80,6 +93,11 @@ const initialAnimals: Animal[] = [
     emotionStrength: 50,
     moveSpeed: 6,
     lastEmotionChange: 0,
+    isDragged: false,
+    dragReaction: null,
+    path: [],
+    lastDragTime: 0,
+    destinationPreference: 'quiet',
   },
   {
     id: 'turtle-1',
@@ -99,6 +117,11 @@ const initialAnimals: Animal[] = [
     emotionStrength: 70,
     moveSpeed: 3,
     lastEmotionChange: 0,
+    isDragged: false,
+    dragReaction: null,
+    path: [],
+    lastDragTime: 0,
+    destinationPreference: 'quiet',
   },
   {
     id: 'dog-1',
@@ -118,6 +141,11 @@ const initialAnimals: Animal[] = [
     emotionStrength: 90,
     moveSpeed: 12,
     lastEmotionChange: 0,
+    isDragged: false,
+    dragReaction: null,
+    path: [],
+    lastDragTime: 0,
+    destinationPreference: 'social',
   },
 ];
 
@@ -636,5 +664,327 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const nextIndex = (currentIndex + 1) % order.length;
     const nextTime = order[nextIndex];
     get().setTimeOfDay(nextTime);
+  },
+
+  startDragAnimal: (animalId) => {
+    const state = get();
+    const animal = state.animals.find((a) => a.id === animalId);
+    if (!animal || animal.isDragged) return;
+
+    set((s) => ({
+      animals: s.animals.map((a) =>
+        a.id === animalId
+          ? {
+              ...a,
+              isDragged: true,
+              isMoving: false,
+              targetPosition: null,
+              path: [],
+              animationState: 'dragged' as AnimationState,
+            }
+          : a
+      ),
+    }));
+
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        get().addParticle({
+          type: 'exclamation',
+          x: animal.position.x + (Math.random() - 0.5) * 5,
+          y: animal.position.y - 8 + Math.random() * 3,
+          duration: 800,
+          scale: 1.2,
+        });
+      }, i * 100);
+    }
+  },
+
+  updateDragPosition: (animalId, position) => {
+    const state = get();
+    const animal = state.animals.find((a) => a.id === animalId);
+    if (!animal || !animal.isDragged) return;
+
+    const clampedX = Math.max(5, Math.min(95, position.x));
+    const clampedY = Math.max(40, Math.min(82, position.y));
+
+    set((s) => ({
+      animals: s.animals.map((a) =>
+        a.id === animalId
+          ? { ...a, position: { x: clampedX, y: clampedY } }
+          : a
+      ),
+    }));
+  },
+
+  endDragAnimal: (animalId, dropPosition) => {
+    const state = get();
+    const animal = state.animals.find((a) => a.id === animalId);
+    if (!animal) return 'cooperate';
+
+    const clampedX = Math.max(8, Math.min(92, dropPosition.x));
+    const clampedY = Math.max(42, Math.min(78, dropPosition.y));
+    const finalPosition = { x: clampedX, y: clampedY };
+
+    let reaction: DragReactionType = 'cooperate';
+    const rand = Math.random();
+
+    if (animal.emotion === 'anxious' || animal.emotion === 'angry') {
+      if (rand < 0.5) {
+        reaction = 'escape';
+      } else if (rand < 0.7) {
+        reaction = 'protest';
+      } else if (rand < 0.85) {
+        reaction = 'play_dead';
+      }
+    } else if (animal.emotion === 'sleepy') {
+      if (rand < 0.5) {
+        reaction = 'stubborn';
+      } else if (rand < 0.7) {
+        reaction = 'play_dead';
+      }
+    } else if (animal.emotion === 'calm') {
+      if (rand < 0.15) {
+        reaction = 'stubborn';
+      }
+    } else if (animal.emotion === 'happy' || animal.emotion === 'excited') {
+      if (rand < 0.1) {
+        reaction = 'escape';
+      }
+    }
+
+    const animals = state.animals;
+    const dropX = finalPosition.x;
+    const dropY = finalPosition.y;
+
+    if (reaction === 'escape') {
+      const escapeAngle = Math.random() * Math.PI * 2;
+      const escapeDist = 25 + Math.random() * 15;
+      const escapePos = {
+        x: Math.max(8, Math.min(92, dropX + Math.cos(escapeAngle) * escapeDist)),
+        y: Math.max(42, Math.min(78, dropY + Math.sin(escapeAngle) * escapeDist * 0.5)),
+      };
+
+      set((s) => ({
+        animals: s.animals.map((a) =>
+          a.id === animalId
+            ? {
+                ...a,
+                isDragged: false,
+                dragReaction: 'escape',
+                animationState: 'escaping' as AnimationState,
+                position: finalPosition,
+                targetPosition: escapePos,
+                isMoving: true,
+                lastDragTime: Date.now(),
+                path: [],
+                direction: escapePos.x < a.position.x ? 'left' : 'right',
+              }
+            : a
+        ),
+      }));
+
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          get().addParticle({
+            type: 'sweat',
+            x: finalPosition.x + (Math.random() - 0.5) * 8,
+            y: finalPosition.y - 5 + Math.random() * 5,
+            duration: 1200,
+          });
+        }, i * 80);
+      }
+
+      setTimeout(() => {
+        const s = useGameStore.getState();
+        const a = s.animals.find((an) => an.id === animalId);
+        if (a && a.animationState === 'escaping') {
+          useGameStore.getState().updateAnimal(animalId, {
+            animationState: 'idle',
+            dragReaction: null,
+          });
+        }
+      }, 2500);
+    } else if (reaction === 'protest') {
+      set((s) => ({
+        animals: s.animals.map((a) =>
+          a.id === animalId
+            ? {
+                ...a,
+                isDragged: false,
+                dragReaction: 'protest',
+                animationState: 'protesting' as AnimationState,
+                position: finalPosition,
+                lastDragTime: Date.now(),
+                path: [],
+              }
+            : a
+        ),
+      }));
+
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => {
+          get().addParticle({
+            type: 'exclamation',
+            x: finalPosition.x + (Math.random() - 0.5) * 10,
+            y: finalPosition.y - 10 + Math.random() * 5,
+            duration: 1000,
+            scale: 1.3,
+          });
+        }, i * 120);
+      }
+
+      setTimeout(() => {
+        const s = useGameStore.getState();
+        const a = s.animals.find((an) => an.id === animalId);
+        if (a && a.animationState === 'protesting') {
+          useGameStore.getState().updateAnimal(animalId, {
+            animationState: 'idle',
+            dragReaction: null,
+          });
+        }
+      }, 2000);
+    } else if (reaction === 'play_dead') {
+      set((s) => ({
+        animals: s.animals.map((a) =>
+          a.id === animalId
+            ? {
+                ...a,
+                isDragged: false,
+                dragReaction: 'play_dead',
+                animationState: 'playing_dead' as AnimationState,
+                position: finalPosition,
+                lastDragTime: Date.now(),
+                path: [],
+              }
+            : a
+        ),
+      }));
+
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          get().addParticle({
+            type: 'zzz',
+            x: finalPosition.x + (Math.random() - 0.5) * 6,
+            y: finalPosition.y - 12 + Math.random() * 3,
+            duration: 1500,
+          });
+        }, i * 200);
+      }
+
+      setTimeout(() => {
+        const s = useGameStore.getState();
+        const a = s.animals.find((an) => an.id === animalId);
+        if (a && a.animationState === 'playing_dead') {
+          useGameStore.getState().updateAnimal(animalId, {
+            animationState: 'idle',
+            dragReaction: null,
+          });
+        }
+      }, 3000);
+    } else if (reaction === 'stubborn') {
+      set((s) => ({
+        animals: s.animals.map((a) =>
+          a.id === animalId
+            ? {
+                ...a,
+                isDragged: false,
+                dragReaction: 'stubborn',
+                animationState: 'stubborn' as AnimationState,
+                position: finalPosition,
+                lastDragTime: Date.now(),
+                path: [],
+              }
+            : a
+        ),
+      }));
+
+      setTimeout(() => {
+        get().addParticle({
+          type: 'sparkle',
+          x: finalPosition.x,
+          y: finalPosition.y - 5,
+          duration: 1500,
+          scale: 1.5,
+        });
+      }, 300);
+
+      setTimeout(() => {
+        const s = useGameStore.getState();
+        const a = s.animals.find((an) => an.id === animalId);
+        if (a && a.animationState === 'stubborn') {
+          useGameStore.getState().updateAnimal(animalId, {
+            animationState: 'idle',
+            dragReaction: null,
+          });
+        }
+      }, 2500);
+    } else {
+      set((s) => ({
+        animals: s.animals.map((a) =>
+          a.id === animalId
+            ? {
+                ...a,
+                isDragged: false,
+                dragReaction: 'cooperate',
+                animationState: 'reacting' as AnimationState,
+                position: finalPosition,
+                lastDragTime: Date.now(),
+                path: [],
+              }
+            : a
+        ),
+      }));
+
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          get().addParticle({
+            type: Math.random() > 0.5 ? 'heart' : 'sparkle',
+            x: finalPosition.x + (Math.random() - 0.5) * 6,
+            y: finalPosition.y - 8 + Math.random() * 4,
+            duration: 1200,
+          });
+        }, i * 100);
+      }
+
+      setTimeout(() => {
+        const s = useGameStore.getState();
+        const a = s.animals.find((an) => an.id === animalId);
+        if (a && (a.animationState === 'reacting' || a.dragReaction === 'cooperate')) {
+          useGameStore.getState().updateAnimal(animalId, {
+            animationState: 'idle',
+            dragReaction: null,
+          });
+        }
+      }, 1200);
+    }
+
+    return reaction;
+  },
+
+  setAnimalPath: (animalId, path) => {
+    set((s) => ({
+      animals: s.animals.map((a) =>
+        a.id === animalId ? { ...a, path } : a
+      ),
+    }));
+  },
+
+  advanceAnimalPath: (animalId) => {
+    const state = get();
+    const animal = state.animals.find((a) => a.id === animalId);
+    if (!animal || animal.path.length === 0) return;
+
+    const nextIndex = animal.path.findIndex((p) => !p.arrived);
+    if (nextIndex === -1) {
+      set((s) => ({
+        animals: s.animals.map((a) =>
+          a.id === animalId ? { ...a, path: [] } : a
+        ),
+      }));
+      return;
+    }
+
+    const nextNode = animal.path[nextIndex];
+    state.setAnimalMoving(animalId, true, nextNode.position);
   },
 }));
