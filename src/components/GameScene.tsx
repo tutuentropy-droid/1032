@@ -7,7 +7,7 @@ import FeedToolbar from './FeedToolbar';
 import Particle from './Particle';
 
 const GameScene: React.FC = () => {
-  const { animals, particles, selectedFood, setSelectedFood } = useGameStore();
+  const { animals, particles, selectedFood, setSelectedFood, globalBrightness } = useGameStore();
 
   useAnimalAI();
 
@@ -21,8 +21,25 @@ const GameScene: React.FC = () => {
     <div
       className={`game-container ${selectedFood ? 'cursor-feed' : ''}`}
       onClick={handleBackgroundClick}
+      style={{
+        filter: `brightness(${globalBrightness})`,
+        transition: 'filter 1s ease-in-out',
+      }}
     >
       <IslandBackground />
+
+      {/* 全局亮度指示（微妙的整体色调） */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: globalBrightness > 1.1
+            ? 'radial-gradient(ellipse at center, rgba(255,230,150,0.15) 0%, transparent 70%)'
+            : globalBrightness < 0.95
+              ? 'radial-gradient(ellipse at center, rgba(100,100,150,0.1) 0%, transparent 70%)'
+              : 'none',
+          transition: 'background 1s ease-in-out',
+        }}
+      />
 
       {/* 标题 */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 text-center">
@@ -39,6 +56,17 @@ const GameScene: React.FC = () => {
         <p className="text-white/80 text-sm mt-1 drop-shadow-md">
           点击小动物和它们互动，选择食物投喂它们吧~
         </p>
+        <div className="mt-2 flex gap-2 justify-center flex-wrap">
+          <span className="text-xs bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-white/90">
+            😊 快乐会传染
+          </span>
+          <span className="text-xs bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-white/90">
+            ⚡ 焦虑会吓跑小伙伴
+          </span>
+          <span className="text-xs bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-white/90">
+            ✨ 汪汪兴奋时会发光
+          </span>
+        </div>
       </div>
 
       {/* 动物们 */}
@@ -54,7 +82,8 @@ const GameScene: React.FC = () => {
           x={particle.x}
           y={particle.y}
           duration={particle.duration || 2000}
-          size={20 + Math.random() * 10}
+          size={particle.scale ? 20 + Math.random() * 10 * particle.scale : 20 + Math.random() * 10}
+          scale={particle.scale || 1}
         />
       ))}
 
