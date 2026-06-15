@@ -94,7 +94,12 @@ const GameScene: React.FC = () => {
 
       {/* 动物们 */}
       {animals.map((animal) => (
-        <Animal key={animal.id} animal={animal} onStartMiniGame={handleStartMiniGame} />
+        <Animal
+          key={animal.id}
+          animal={animal}
+          onStartMiniGame={handleStartMiniGame}
+          miniGameActive={miniGameOpen}
+        />
       ))}
 
       {/* 粒子特效 */}

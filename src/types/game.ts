@@ -113,6 +113,7 @@ export interface GameActions {
   updateAnimal: (animalId: string, updates: Partial<Animal>) => void;
   startMiniGame: (animalId: string, gameType: MiniGameType) => void;
   endMiniGame: (result: MiniGameResult) => void;
+  clearMiniGame: () => void;
   updateMiniGameScore: (score: number) => void;
   setMiniGameTimeLeft: (time: number) => void;
 }

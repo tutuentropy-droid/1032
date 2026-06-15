@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '@/store/gameStore';
 
 interface FindKeyGameProps {
@@ -29,6 +29,7 @@ const FindKeyGame: React.FC<FindKeyGameProps> = ({ duration, onSuccess, onFail }
   const [spots, setSpots] = useState<HidingSpot[]>([]);
   const [foundKeys, setFoundKeys] = useState(0);
   const [wrongClicks, setWrongClicks] = useState(0);
+  const gameEndedRef = useRef(false);
   const targetKeys = 3;
   const { updateMiniGameScore, setMiniGameTimeLeft } = useGameStore();
 
@@ -80,9 +81,12 @@ const FindKeyGame: React.FC<FindKeyGameProps> = ({ duration, onSuccess, onFail }
   }, [foundKeys, updateMiniGameScore]);
 
   useEffect(() => {
+    if (gameEndedRef.current) return;
     if (foundKeys >= targetKeys) {
+      gameEndedRef.current = true;
       onSuccess();
     } else if (timeLeft <= 0) {
+      gameEndedRef.current = true;
       onFail();
     }
   }, [foundKeys, timeLeft, targetKeys, onSuccess, onFail]);

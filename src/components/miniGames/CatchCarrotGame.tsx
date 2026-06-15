@@ -23,6 +23,7 @@ const CatchCarrotGame: React.FC<CatchCarrotGameProps> = ({ duration, onSuccess, 
   const [combo, setCombo] = useState(0);
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
+  const gameEndedRef = useRef(false);
   const targetScore = 15;
   const { updateMiniGameScore, setMiniGameTimeLeft } = useGameStore();
 
@@ -49,7 +50,9 @@ const CatchCarrotGame: React.FC<CatchCarrotGameProps> = ({ duration, onSuccess, 
   }, [score, updateMiniGameScore]);
 
   useEffect(() => {
+    if (gameEndedRef.current) return;
     if (timeLeft <= 0) {
+      gameEndedRef.current = true;
       if (score >= targetScore) {
         onSuccess();
       } else {

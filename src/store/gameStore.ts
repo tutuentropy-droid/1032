@@ -367,6 +367,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       });
 
       for (let i = 0; i < 10; i++) {
+        const delay = i * 100;
         setTimeout(() => {
           get().addParticle({
             type: Math.random() > 0.5 ? 'star' : 'sparkle',
@@ -375,7 +376,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
             duration: 2000 + Math.random() * 500,
             scale: 1.5,
           });
-        }, i * 100);
+        }, delay);
       }
 
       setTimeout(() => {
@@ -387,6 +388,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       });
 
       for (let i = 0; i < 5; i++) {
+        const delay = i * 80;
         setTimeout(() => {
           get().addParticle({
             type: 'sweat',
@@ -394,17 +396,17 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
             y: animal.position.y - 5 + Math.random() * 5,
             duration: 1500,
           });
-        }, i * 80);
+        }, delay);
       }
 
       setTimeout(() => {
         get().setAnimationState(animal.id, 'idle');
       }, 1500);
     }
+  },
 
-    setTimeout(() => {
-      set({ activeMiniGame: null });
-    }, 500);
+  clearMiniGame: () => {
+    set({ activeMiniGame: null });
   },
 
   updateMiniGameScore: (score) => {

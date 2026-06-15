@@ -5,7 +5,7 @@ import { createBehaviorTree, executeNode } from '@/lib/behaviorTree';
 import { processEmotionChain } from '@/lib/emotionChain';
 
 export const useAnimalAI = () => {
-  const { animals, updateAnimalPosition, setAnimalMoving } = useGameStore();
+  const { animals, updateAnimalPosition, setAnimalMoving, activeMiniGame } = useGameStore();
   const animationRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
   const lastBehaviorTickRef = useRef<number>(Date.now());
@@ -29,6 +29,7 @@ export const useAnimalAI = () => {
 
       const state = useGameStore.getState();
       state.animals.forEach((animal) => {
+        if (state.activeMiniGame && state.activeMiniGame.animalId === animal.id) return;
         if (animal.isMoving && animal.targetPosition) {
           const speed = animal.moveSpeed;
           const dx = animal.targetPosition.x - animal.position.x;
@@ -58,6 +59,7 @@ export const useAnimalAI = () => {
         };
 
         useGameStore.getState().animals.forEach((animal) => {
+          if (useGameStore.getState().activeMiniGame && useGameStore.getState().activeMiniGame!.animalId === animal.id) return;
           if (animal.animationState === 'eating' || animal.animationState === 'reacting') return;
           const tree = behaviorTrees[animal.id];
           if (!tree) return;
@@ -76,6 +78,7 @@ export const useAnimalAI = () => {
         lastHungerTickRef.current = now;
         const s = useGameStore.getState();
         s.animals.forEach((animal) => {
+          if (s.activeMiniGame && s.activeMiniGame.animalId === animal.id) return;
           const timeSinceLastFed = now - animal.lastFedTime;
           const newHunger = Math.min(100, animal.hunger + timeSinceLastFed / 60000 * 2);
           const newHappiness = Math.max(0, animal.happiness - (newHunger > 70 ? 0.5 : 0.1));

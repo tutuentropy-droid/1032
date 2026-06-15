@@ -8,9 +8,10 @@ import { getEmotionAura } from '@/lib/emotionChain';
 interface AnimalProps {
   animal: AnimalType;
   onStartMiniGame: (animalId: string) => void;
+  miniGameActive?: boolean;
 }
 
-const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame }) => {
+const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame, miniGameActive = false }) => {
   const { selectedFood, feedAnimal, petAnimal } = useGameStore();
   const gameInfo = ANIMAL_MINI_GAMES[animal.type];
 
@@ -37,7 +38,9 @@ const Animal: React.FC<AnimalProps> = ({ animal, onStartMiniGame }) => {
         left: `${animal.position.x}%`,
         top: `${animal.position.y}%`,
         transform: 'translate(-50%, -50%)',
-        zIndex: Math.floor(animal.position.y),
+        zIndex: miniGameActive ? 1 : Math.floor(animal.position.y),
+        opacity: miniGameActive ? 0.5 : 1,
+        transition: 'opacity 0.3s ease',
       }}
       onClick={handleClick}
     >

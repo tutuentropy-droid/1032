@@ -27,6 +27,7 @@ const CatchFrisbeeGame: React.FC<CatchFrisbeeGameProps> = ({ duration, onSuccess
   const [combo, setCombo] = useState(0);
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
+  const gameEndedRef = useRef(false);
   const targetScore = 12;
   const { updateMiniGameScore, setMiniGameTimeLeft } = useGameStore();
 
@@ -53,7 +54,9 @@ const CatchFrisbeeGame: React.FC<CatchFrisbeeGameProps> = ({ duration, onSuccess
   }, [score, updateMiniGameScore]);
 
   useEffect(() => {
+    if (gameEndedRef.current) return;
     if (timeLeft <= 0) {
+      gameEndedRef.current = true;
       if (score >= targetScore) {
         onSuccess();
       } else {

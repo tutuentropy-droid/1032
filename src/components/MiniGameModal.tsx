@@ -17,7 +17,8 @@ interface MiniGameModalProps {
 const MiniGameModal: React.FC<MiniGameModalProps> = ({ isOpen, onClose, animalId, gameType }) => {
   const [gamePhase, setGamePhase] = useState<'intro' | 'playing' | 'result'>('intro');
   const [gameResult, setGameResult] = useState<'success' | 'failed' | null>(null);
-  const { animals, endMiniGame } = useGameStore();
+  const [gameKey, setGameKey] = useState(0);
+  const { animals, endMiniGame, startMiniGame, activeMiniGame, clearMiniGame } = useGameStore();
 
   const animal = animals.find(a => a.id === animalId);
   const gameInfo = Object.values(ANIMAL_MINI_GAMES).find(g => g.type === gameType);
@@ -26,11 +27,17 @@ const MiniGameModal: React.FC<MiniGameModalProps> = ({ isOpen, onClose, animalId
     if (isOpen) {
       setGamePhase('intro');
       setGameResult(null);
+      setGameKey(k => k + 1);
+      startMiniGame(animalId, gameType);
     }
-  }, [isOpen]);
+  }, [isOpen, animalId, gameType, startMiniGame]);
 
   const handleStart = () => {
+    setGameKey(k => k + 1);
     setGamePhase('playing');
+    if (!activeMiniGame) {
+      startMiniGame(animalId, gameType);
+    }
   };
 
   const handleSuccess = () => {
@@ -46,6 +53,10 @@ const MiniGameModal: React.FC<MiniGameModalProps> = ({ isOpen, onClose, animalId
   };
 
   const handleClose = () => {
+    if (activeMiniGame && gamePhase === 'playing') {
+      endMiniGame('failed');
+    }
+    clearMiniGame();
     onClose();
   };
 
@@ -78,7 +89,7 @@ const MiniGameModal: React.FC<MiniGameModalProps> = ({ isOpen, onClose, animalId
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       style={{
         backgroundColor: 'rgba(0,0,0,0.5)',
         animation: 'fadeIn 0.3s ease-out',
@@ -132,7 +143,7 @@ const MiniGameModal: React.FC<MiniGameModalProps> = ({ isOpen, onClose, animalId
           )}
 
           {gamePhase === 'playing' && (
-            <div className="min-h-[400px]">
+            <div className="min-h-[400px]" key={gameKey}>
               {renderGame()}
             </div>
           )}

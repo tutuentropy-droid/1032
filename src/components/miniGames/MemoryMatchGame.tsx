@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGameStore } from '@/store/gameStore';
 
 interface MemoryMatchGameProps {
@@ -23,6 +23,7 @@ const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({ duration, onSuccess, 
   const [matches, setMatches] = useState(0);
   const [moves, setMoves] = useState(0);
   const [isChecking, setIsChecking] = useState(false);
+  const gameEndedRef = useRef(false);
   const targetMatches = 6;
   const { updateMiniGameScore, setMiniGameTimeLeft } = useGameStore();
 
@@ -67,9 +68,12 @@ const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({ duration, onSuccess, 
   }, [matches, updateMiniGameScore]);
 
   useEffect(() => {
+    if (gameEndedRef.current) return;
     if (matches >= targetMatches) {
+      gameEndedRef.current = true;
       setTimeout(() => onSuccess(), 500);
     } else if (timeLeft <= 0) {
+      gameEndedRef.current = true;
       onFail();
     }
   }, [matches, timeLeft, targetMatches, onSuccess, onFail]);
